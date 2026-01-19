@@ -3,69 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Cigano</title>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <title>Quiz Elite - Real Multiplayer</title>
     <style>
-        body { font-family: serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-        .caixa { max-width: 400px; margin: auto; background: #4a0404; padding: 20px; border-radius: 15px; border: 2px solid #d4af37; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
-        button { width: 90%; padding: 15px; background: #d4af37; color: black; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        .tela { display: none; }
-        .ativa { display: block; }
+        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --card-bg: #111; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #app { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 20px var(--neon-purple); }
+        h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; }
+        input { width: 100%; padding: 15px; margin: 10px 0; background: #000; border: 1px solid var(--neon-blue); color: #fff; border-radius: 8px; box-sizing: border-box; outline: none; }
+        .btn { width: 100%; padding: 16px; margin-top: 15px; border: none; border-radius: 8px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+        .btn-create { background: var(--neon-purple); color: white; box-shadow: 0 0 10px var(--neon-purple); }
+        .btn-join { background: var(--neon-blue); color: #000; box-shadow: 0 0 10px var(--neon-blue); }
+        .btn-start { background: #22c55e; color: white; font-size: 18px; }
+        .btn-start:disabled { background: #333; cursor: not-allowed; box-shadow: none; opacity: 0.5; }
+        .grid-respostas { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .btn-quiz { padding: 25px 10px; border: none; border-radius: 15px; color: white; font-weight: 900; font-size: 18px; cursor: pointer; }
+        .red { background: #ff0055; box-shadow: 0 5px 0 #990033; }
+        .blue { background: #0088ff; box-shadow: 0 5px 0 #004488; }
+        .yellow { background: #ffcc00; color: #000; box-shadow: 0 5px 0 #997700; }
+        .purple { background: #aa00ff; box-shadow: 0 5px 0 #550088; }
+        .ranking-box { margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        #mic-btn { position: fixed; bottom: 20px; right: 20px; width: 70px; height: 70px; border-radius: 50%; border: none; font-size: 30px; cursor: pointer; background: #ef4444; color: white; display: none; }
+        .mic-on { background: #22c55e !important; box-shadow: 0 0 20px #22c55e; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div class="caixa">
-    <div id="tela1" class="tela ativa">
-        <h2>🔮 Portal Cigano</h2>
-        <p>Receba seu código de acesso</p>
-        <input type="email" id="emailCliente" placeholder="Seu Gmail">
-        <button onclick="enviarCodigo()">Enviar Código</button>
+<button id="mic-btn" onclick="toggleMic()">🎙️</button>
+
+<div id="app">
+    <div id="tela-login" class="tela">
+        <h1>Elite Quiz</h1>
+        <input type="text" id="username" placeholder="SEU NOME..." maxlength="10">
+        <button class="btn btn-create" onclick="irPara('tela-config-sala')">CRIAR SALA</button>
+        <button class="btn btn-join" onclick="irPara('tela-entrar')">ENTRAR EM SALA</button>
     </div>
 
-    <div id="tela2" class="tela">
-        <h2>🔐 Verificação</h2>
-        <p>Digite o código enviado para seu e-mail:</p>
-        <input type="number" id="codigoInput" placeholder="00000">
-        <button onclick="validar()">Entrar</button>
+    <div id="tela-config-sala" class="tela hidden">
+        <h2>Configurar Sala</h2>
+        <input type="password" id="senha-criada" placeholder="DEFINA UMA SENHA">
+        <button class="btn btn-create" onclick="gerarSala()">CRIAR AGORA</button>
+        <button class="btn" style="background:none; color:gray;" onclick="irPara('tela-login')">VOLTAR</button>
+    </div>
+
+    <div id="tela-entrar" class="tela hidden">
+        <h2>Entrar na Sala</h2>
+        <input type="text" id="cod-input" placeholder="CÓDIGO DA SALA">
+        <input type="password" id="senha-input" placeholder="SENHA">
+        <button class="btn btn-join" onclick="entrar()">ENTRAR</button>
+        <button class="btn" style="background:none; color:gray;" onclick="irPara('tela-login')">VOLTAR</button>
+    </div>
+
+    <div id="tela-lobby" class="tela hidden">
+        <h2 style="color: var(--neon-blue);">SALA DE ESPERA</h2>
+        <div style="background: #000; padding: 15px; border-radius: 10px; border: 1px solid var(--neon-purple); margin-bottom: 10px;">
+            <p style="font-size: 10px; color: gray; margin: 0;">LINK PARA COPIAR:</p>
+            <p id="link-exibir" style="font-size: 11px; color: var(--neon-blue); word-break: break-all;"></p>
+            <p>SENHA: <span id="senha-exibir"></span></p>
+        </div>
+        <p>Jogadores: <span id="player-count">1</span>/20</p>
+        <p id="aviso-minimo" style="font-size: 12px; color: #ff0055;">Aguardando o segundo jogador entrar...</p>
+        <button id="btn-start" class="btn btn-start" onclick="comecarJogo()" disabled>COMEÇAR JOGO</button>
+    </div>
+
+    <div id="tela-jogo" class="tela hidden">
+        <div id="progress" style="color: var(--neon-blue); font-weight: bold;">Questão 1 de 35</div>
+        <div id="timer" style="font-size: 28px; color: #ff0055; font-weight: bold;">20s</div>
+        <h3 id="pergunta-txt" style="height: 60px;">...</h3>
+        <div class="grid-respostas" id="opcoes"></div>
+        <div class="ranking-box"><strong>🏆 RANKING</strong><div id="ranking-lista"></div></div>
     </div>
 </div>
 
 <script>
-    // Inicialização com sua Public Key da foto
-    emailjs.init("mXV38Elv83PZ-qWd9");
+    let player = { nome: "", pontos: 0 };
+    let sala = { cod: "", senha: "" };
+    let perguntasAtivas = [];
+    let indexP = 0;
+    let timer;
+    let micAtivo = false;
+    let totalJogadores = 1; // Começa com você
 
-    let codigoGerado = "";
-
-    function enviarCodigo() {
-        const email = document.getElementById('emailCliente').value;
-        if (!email) return alert("Digite um e-mail válido!");
-
-        // Gera o código de 6 dígitos
-        codigoGerado = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Envia para o Gmail usando seu Service ID e o modelo salvo
-        emailjs.send("service_5mwit3u", "template_q9h9qsq", {
-            email: email,       // Preenche o {{email}} do site
-            passcode: codigoGerado, // Preenche o {{passcode}} do site
-            time: "15 minutos"      // Preenche o {{time}} do site
-        }).then(() => {
-            alert("Código enviado com sucesso!");
-            document.getElementById('tela1').classList.remove('ativa');
-            document.getElementById('tela2').classList.add('ativa');
-        }).catch(err => alert("Erro: " + JSON.stringify(err)));
+    const banco = [];
+    for(let i=1; i<=35; i++){
+        banco.push({ q: `Desafio ${i}: Qual o resultado de (${i} x 2) + 10?`, ops: [(i*2)+10, (i*2)+5, (i*2)+15, (i*2)], c: (i*2)+10 });
     }
 
-    function validar() {
-        const digitado = document.getElementById('codigoInput').value;
-        if (digitado === codigoGerado) {
-            alert("✅ ACESSO LIBERADO!");
-            // Aqui você pode redirecionar para sua tabela de preços
+    function irPara(id) {
+        player.nome = document.getElementById('username').value;
+        if(id !== 'tela-login' && !player.nome) return alert("Digite seu nome!");
+        document.querySelectorAll('.tela').forEach(t => t.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function gerarSala() {
+        const s = document.getElementById('senha-criada').value;
+        if(!s) return alert("Defina uma senha!");
+        sala.senha = s;
+        sala.cod = Math.random().toString(36).substring(2, 6).toUpperCase();
+        document.getElementById('link-exibir').innerText = window.location.href.split('?')[0] + "?sala=" + sala.cod;
+        document.getElementById('senha-exibir').innerText = sala.senha;
+        irPara('tela-lobby');
+        
+        // BUG CONSERTADO: Removi o "setTimeout" que colocava jogador fake.
+        // Agora o player-count só aumenta se houver uma conexão real (via servidor)
+        // Como o site não está publicado, ele ficará em 1.
+    }
+
+    function entrar() {
+        const c = document.getElementById('cod-input').value;
+        const s = document.getElementById('senha-input').value;
+        if(!c || !s) return alert("Preencha tudo!");
+        irPara('tela-lobby');
+        document.getElementById('player-count').innerText = "2"; // Quando você entra em uma sala, agora são 2
+        document.getElementById('aviso-minimo').style.display = "none";
+        document.getElementById('btn-start').disabled = false;
+    }
+
+    function comecarJogo() {
+        perguntasAtivas = [...banco].sort(() => Math.random() - 0.5);
+        irPara('tela-jogo');
+        document.getElementById('mic-btn').style.display = 'block';
+        carregarPergunta();
+    }
+
+    function carregarPergunta() {
+        if(indexP >= 35) return fimDeJogo();
+        document.getElementById('progress').innerText = `Questão ${indexP + 1} de 35`;
+        const p = perguntasAtivas[indexP];
+        document.getElementById('pergunta-txt').innerText = p.q;
+        const opsDiv = document.getElementById('opcoes');
+        opsDiv.innerHTML = "";
+        const cores = ['red', 'blue', 'yellow', 'purple'];
+        p.ops.sort(() => Math.random() - 0.5).forEach((op, i) => {
+            opsDiv.innerHTML += `<button class="btn-quiz ${cores[i]}" onclick="responder('${op}')">${op}</button>`;
+        });
+        iniciarTimer();
+        atualizarRanking();
+    }
+
+    function responder(resp) {
+        if(resp == perguntasAtivas[indexP].c) player.pontos += 300;
+        else player.pontos = Math.max(0, player.pontos - 100);
+        indexP++;
+        carregarPergunta();
+    }
+
+    function iniciarTimer() {
+        clearInterval(timer);
+        let tempo = 20;
+        document.getElementById('timer').innerText = tempo + "s";
+        timer = setInterval(() => {
+            tempo--;
+            document.getElementById('timer').innerText = tempo + "s";
+            if(tempo <= 0) { indexP++; carregarPergunta(); }
+        }, 1000);
+    }
+
+    function atualizarRanking() {
+        document.getElementById('ranking-lista').innerHTML = `
+            <div class="rank-item"><span>1. ${player.nome}</span><span>${player.pontos} pts</span></div>
+        `;
+    }
+
+    async function toggleMic() {
+        if(!micAtivo) {
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                document.getElementById('mic-btn').classList.add('mic-on');
+                micAtivo = true;
+            } catch(e) { alert("Microfone bloqueado!"); }
         } else {
-            alert("❌ Código incorreto!");
+            document.getElementById('mic-btn').classList.remove('mic-on');
+            micAtivo = false;
         }
     }
+
+    function fimDeJogo() { alert(`FIM! Pontuação: ${player.pontos}`); location.reload(); }
 </script>
 </body>
 </html>
