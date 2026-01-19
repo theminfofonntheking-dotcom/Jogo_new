@@ -9,26 +9,29 @@
         :root { --primary: #e74c3c; --bg: #0f0f1a; --card: #1c1c2d; }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         #game-container { background: var(--card); width: 95%; max-width: 500px; padding: 25px; border-radius: 30px; border: 3px solid #3b3b55; position: relative; box-sizing: border-box; }
+        
         .config-icon { position: absolute; top: -55px; right: 5px; font-size: 32px; cursor: pointer; background: var(--card); padding: 10px; border-radius: 50%; border: 2px solid #3b3b55; z-index: 100; }
+        
         .screen { display: none; flex-direction: column; gap: 12px; }
         .active { display: flex !important; }
+
         input, select { width: 100%; padding: 15px; border-radius: 12px; border: none; background: #2a2a40; color: #fff; font-size: 16px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #7289da; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
-        
+        button { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #7289da; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
+
+        /* Abas Configurações */
         .tab-container { display: flex; gap: 5px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 10px; background: #3b3b55; border-radius: 10px; font-size: 11px; cursor: pointer; text-align: center; }
-        .active-tab { background: var(--primary) !important; }
+        .active-tab { background: var(--primary) !important; font-weight: bold; }
 
+        /* Cores e Chat */
         .color-row { display: flex; justify-content: space-between; align-items: center; background: #1c1c2d; padding: 12px; border-radius: 12px; margin-bottom: 5px; border: 1px solid #444; cursor: pointer; }
         .color-rainbow { background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; color: transparent; animation: rainbow 2s infinite; font-weight: bold; }
         @keyframes rainbow { 0%{filter: hue-rotate(0deg)} 100%{filter: hue-rotate(360deg)} }
         .color-gold { color: #f1c40f; text-shadow: 0 0 5px gold; font-weight: bold; }
-        .name-black { background-color: #000; color: #fff !important; padding: 2px 5px; border-radius: 4px; }
+        .name-black { background-color: #000; color: #fff !important; padding: 2px 5px; border-radius: 4px; border: 1px solid #555; }
 
         #chat-box { height: 180px; overflow-y: auto; background: #0a0a14; padding: 10px; border-radius: 15px; border: 2px solid #3b3b55; margin-bottom: 5px; }
         .msg { margin-bottom: 5px; font-size: 14px; }
-        
-        #vote-modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; padding: 20px; box-sizing: border-box; border-radius: 30px; }
     </style>
 </head>
 <body>
@@ -38,16 +41,20 @@
 
         <div id="settings-panel" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; background:#2a2a40; padding:20px; border-radius:20px; z-index:500; border:2px solid #fff;">
             <div class="tab-container">
-                <div id="btn-tab-col" class="tab-btn active-tab" onclick="switchTab('colors')">LOJA</div>
-                <div id="btn-tab-lan" class="tab-btn" onclick="switchTab('lang')">PAÍS</div>
+                <div class="tab-btn active-tab" id="btn-col" onclick="switchTab('colors')">LOJA</div>
+                <div class="tab-btn" id="btn-lan" onclick="switchTab('lang')">PAÍS</div>
             </div>
+
             <div id="tab-colors">
-                <p>💰 Moedas: <span id="my-money">0</span></p>
-                <div class="color-row" onclick="setColor('white')"><span>Branco</span> <span style="color:green">Grátis</span></div>
-                <div class="color-row" onclick="setColor('black')"><span>Preto</span> <span style="color:green">Grátis</span></div>
-                <div class="color-row" onclick="buyColor('gold', 200)"><span class="color-gold">Dourado ✨</span> <span>200💰</span></div>
-                <div class="color-row" onclick="buyColor('rainbow', 400)"><span class="color-rainbow">Colorido 🌈</span> <span>400💰</span></div>
+                <p>💰 Minhas Moedas: <span id="my-money">0</span></p>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <div class="color-row" onclick="setColor('white')"><span>Branco</span> <span style="color:green">Grátis</span></div>
+                    <div class="color-row" onclick="setColor('black')"><span>Preto</span> <span style="color:green">Grátis</span></div>
+                    <div class="color-row" onclick="buyColor('gold', 200)"><span class="color-gold">Dourado ✨</span> <span>200💰</span></div>
+                    <div class="color-row" onclick="buyColor('rainbow', 400)"><span class="color-rainbow">Colorido 🌈</span> <span>400💰</span></div>
+                </div>
             </div>
+
             <div id="tab-lang" style="display:none;">
                 <select id="country-select" onchange="myCountry = this.value">
                     <option value="🇧🇷">Brasil 🇧🇷</option>
@@ -55,13 +62,7 @@
                     <option value="🇯🇵">Japan 🇯🇵</option>
                 </select>
             </div>
-            <button onclick="toggleSettings()" style="background:var(--primary); margin-top:10px">FECHAR</button>
-        </div>
-
-        <div id="vote-modal">
-            <h2 style="text-align:center; color:#f1c40f">VOTAÇÃO</h2>
-            <div id="vote-list"></div>
-            <button onclick="document.getElementById('vote-modal').style.display='none'" style="margin-top:10px; background:#444">VOLTAR</button>
+            <button onclick="toggleSettings()" style="background:var(--primary); margin-top:10px">OK</button>
         </div>
 
         <div id="setup-screen" class="screen active">
@@ -69,14 +70,12 @@
             <input type="text" id="player-name" placeholder="Seu Nome">
             
             <div style="background:#1c1c2d; padding:15px; border-radius:15px; border: 1px solid #e74c3c;">
-                <p style="margin:0 0 5px 0; font-size:12px">CRIAR SALA (SENHA OBRIGATÓRIA):</p>
-                <select id="max-players" style="margin-bottom:10px">
+                <select id="max-players">
                     <option value="2">2 JOGADORES (X1)</option>
                     <option value="3" selected>3 JOGADORES</option>
-                    <option value="4">4 JOGADORES</option>
                     <option value="5">5 JOGADORES</option>
                 </select>
-                <input type="password" id="room-pass" placeholder="🔒 Defina a Senha">
+                <input type="password" id="room-pass" placeholder="🔒 Senha Obrigatória">
                 <button onclick="setupHost()" style="background:#27ae60; margin-top:10px">CRIAR SALA</button>
             </div>
 
@@ -88,38 +87,37 @@
         </div>
 
         <div id="game-screen" class="screen">
-            <div style="display:flex; justify-content:space-between">
-                <span id="player-counter">1/--</span>
-                <button onclick="copyCode()" style="width:auto; padding:5px 10px; font-size:12px">©️ COPIAR</button>
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <span id="player-counter" style="color:#f1c40f; font-weight:bold">1/--</span>
+                <button onclick="leaveRoom()" style="width:auto; padding:8px 15px; font-size:11px; background:#c0392b">SAIR DA SALA</button>
             </div>
-            <div id="role-display" style="background:#34495e; padding:10px; text-align:center; border-radius:10px; font-weight:bold">AGUARDANDO...</div>
             <div id="chat-box"></div>
             <div style="display:flex; gap:5px">
-                <input type="text" id="chat-input" placeholder="...">
+                <input type="text" id="chat-input" placeholder="Mensagem...">
                 <button onclick="sendMsg()" style="width:60px; background:#f39c12">OK</button>
             </div>
-            <button id="ptt-btn" style="background:#444; height:50px">SEGURE PARA FALAR 🎙️</button>
-            <button onclick="openVote()" style="background:#f1c40f; color:#000">VOTAR ⚖️</button>
+            <button id="voice-btn" onclick="toggleVoice()" style="background:#444; height:65px">VOICE: DESLIGADO 🔇</button>
+            <button onclick="copyCode()" style="background:#34495e; padding:10px; font-size:12px">COPIAR CÓDIGO ©️</button>
         </div>
     </div>
 
 <script>
-    let peer = new Peer(), conn, myStream, isHost = false, players = [], allInGame = [], maxP = 3;
+    let peer = new Peer(), conn, myStream, isHost = false, players = [], maxP = 2, micActive = false;
     let myColor = 'white', myCountry = '🇧🇷', myCoins = parseInt(localStorage.getItem('coins')) || 0;
     let roomPassword = "";
 
     document.getElementById('my-money').innerText = myCoins;
 
-    peer.on('disconnected', () => peer.reconnect());
+    function toggleSettings() {
+        const s = document.getElementById('settings-panel');
+        s.style.display = s.style.display === 'none' ? 'block' : 'none';
+    }
 
     function switchTab(tab) {
         document.getElementById('tab-colors').style.display = tab === 'colors' ? 'block' : 'none';
         document.getElementById('tab-lang').style.display = tab === 'lang' ? 'block' : 'none';
-    }
-
-    function toggleSettings() {
-        const s = document.getElementById('settings-panel');
-        s.style.display = s.style.display === 'none' ? 'block' : 'none';
+        document.getElementById('btn-col').classList.toggle('active-tab', tab === 'colors');
+        document.getElementById('btn-lan').classList.toggle('active-tab', tab === 'lang');
     }
 
     async function initVoice() {
@@ -133,13 +131,19 @@
         } catch(e) { console.log("Mic recusado"); }
     }
 
-    function setupHost() {
+    function toggleVoice() {
+        if(!myStream) return;
+        micActive = !micActive;
+        myStream.getAudioTracks()[0].enabled = micActive;
+        const btn = document.getElementById('voice-btn');
+        btn.style.background = micActive ? '#27ae60' : '#444';
+        btn.innerText = micActive ? "VOICE: LIGADO 🎤" : "VOICE: DESLIGADO 🔇";
+    }
+
+    async function setupHost() {
         roomPassword = document.getElementById('room-pass').value;
-        if(!roomPassword) {
-            alert("ERRO: Você deve definir uma SENHA para criar a sala!");
-            return;
-        }
-        initVoice();
+        if(!roomPassword) { alert("ERRO: Senha é obrigatória!"); return; }
+        await initVoice();
         isHost = true;
         maxP = parseInt(document.getElementById('max-players').value);
         showScreen('game-screen');
@@ -149,80 +153,37 @@
             c.on('data', data => {
                 if(data.type === 'auth') {
                     if(data.pass === roomPassword) {
-                        if(players.length + 1 >= maxP) {
-                            c.send({type:'auth_fail', msg: "SALA CHEIA"});
-                            return;
-                        }
-                        players.push({id: c.peer, name: data.name, country: data.country, color: data.color, conn: c});
-                        refreshAllInGame();
+                        players.push({id: c.peer, conn: c});
                         c.send({type:'auth_ok', max: maxP});
-                        peer.call(c.peer, myStream);
-                    } else {
-                        c.send({type:'auth_fail', msg: "SENHA INCORRETA"});
-                    }
+                        setTimeout(() => peer.call(c.peer, myStream), 1000);
+                        updateCounter(players.length + 1, maxP);
+                    } else { c.send({type:'auth_fail'}); }
                 }
                 if(data.type === 'chat') broadcast({type:'chat', ...data});
             });
         });
-        alert("SALA CRIADA! Passe o código e a senha para seus amigos.");
+        alert("SALA CRIADA! Código: " + peer.id);
     }
 
-    function joinRoom() {
+    async function joinRoom() {
         const id = document.getElementById('join-id').value;
         const pass = document.getElementById('join-pass-input').value;
-        if(!id || !pass) {
-            alert("Digite o CÓDIGO e a SENHA!");
-            return;
-        }
-        initVoice();
+        if(!id || !pass) { alert("Código e Senha são necessários!"); return; }
+        await initVoice();
         conn = peer.connect(id);
         conn.on('open', () => {
-            conn.send({type:'auth', name: document.getElementById('player-name').value, country: myCountry, color: myColor, pass: pass});
+            conn.send({type:'auth', name: document.getElementById('player-name').value, pass: pass, country: myCountry, color: myColor});
         });
         conn.on('data', data => {
-            if(data.type === 'auth_ok') {
-                maxP = data.max;
-                showScreen('game-screen');
-            }
-            if(data.type === 'auth_fail') alert(data.msg);
-            if(data.type === 'update_players') {
-                allInGame = data.all;
-                updateCounter(allInGame.length, maxP);
-            }
+            if(data.type === 'auth_ok') { maxP = data.max; showScreen('game-screen'); }
+            if(data.type === 'auth_fail') alert("Senha Incorreta!");
             if(data.type === 'chat') addMsg(data);
         });
     }
 
-    function refreshAllInGame() {
-        allInGame = [{id:peer.id, name:document.getElementById('player-name').value}, ...players.map(p=>({id:p.id, name:p.name}))];
-        updateCounter(allInGame.length, maxP);
-        broadcast({type:'update_players', all: allInGame});
+    function leaveRoom() {
+        if(confirm("Deseja sair da sala?")) location.reload();
     }
-
-    function updateCounter(cur, max) { document.getElementById('player-counter').innerText = cur + "/" + max; }
-
-    function openVote() {
-        const list = document.getElementById('vote-list');
-        list.innerHTML = "";
-        allInGame.forEach(p => {
-            list.innerHTML += `<button onclick="confirmVote('${p.name}')" style="margin-bottom:5px; background:#2a2a40">${p.name}</button>`;
-        });
-        document.getElementById('vote-modal').style.display = 'block';
-    }
-
-    function confirmVote(name) {
-        alert("Votou em: " + name);
-        document.getElementById('vote-modal').style.display = 'none';
-        if(confirm("Deseja encerrar e ganhar 70 moedas?")) {
-            myCoins += 70;
-            localStorage.setItem('coins', myCoins);
-            location.reload();
-        }
-    }
-
-    const btn = document.getElementById('ptt-btn');
-    btn.onmousedown = () => { if(myStream) myStream.getAudioTracks()[0].enabled = true; btn.style.background='#27ae60'; };
-    btn.onmouseup = () => { if(myStream) myStream.getAudioTracks()[0].enabled = false; btn.style.background='#444'; };
 
     function sendMsg() {
         const input = document.getElementById('chat-input');
@@ -234,17 +195,18 @@
 
     function addMsg(data) {
         const b = document.getElementById('chat-box');
-        const colorClass = data.color === 'rainbow' ? 'color-rainbow' : (data.color === 'black' ? 'name-black' : (data.color === 'gold' ? 'color-gold' : ''));
-        const style = (!colorClass) ? `style="color:${data.color}"` : '';
-        b.innerHTML += `<div class="msg"><span>${data.country}</span> <b ${style} class="${colorClass}">${data.name}:</b> ${data.text}</div>`;
+        const cClass = data.color === 'rainbow' ? 'color-rainbow' : (data.color === 'black' ? 'name-black' : (data.color === 'gold' ? 'color-gold' : ''));
+        const style = (!cClass) ? `style="color:${data.color}"` : '';
+        b.innerHTML += `<div class="msg"><span>${data.country}</span> <b ${style} class="${cClass}">${data.name}:</b> ${data.text}</div>`;
         b.scrollTop = b.scrollHeight;
     }
 
     function broadcast(data) { addMsg(data); players.forEach(p => p.conn.send(data)); }
     function showScreen(s) { document.querySelectorAll('.screen').forEach(d => d.classList.remove('active')); document.getElementById(s).classList.add('active'); }
-    function copyCode() { navigator.clipboard.writeText(peer.id); alert("Copiado!"); }
+    function updateCounter(cur, max) { document.getElementById('player-counter').innerText = cur + "/" + max; }
+    function copyCode() { navigator.clipboard.writeText(peer.id); alert("Código Copiado!"); }
     function setColor(c) { myColor = c; alert("Equipado!"); }
     function buyColor(c, p) { if(myCoins >= p) { myColor = c; alert("Comprado!"); } else alert("Moedas insuficientes!"); }
 </script>
 </body>
-</html>
+                                                     </html>
