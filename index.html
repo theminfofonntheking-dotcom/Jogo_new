@@ -3,205 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Elite - Online Arena</title>
+    <title>Elite Quiz - Arena Online</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        :root {
-            --neon-purple: #bc13fe;
-            --neon-blue: #03e9f4;
-            --bg-dark: #050505;
-            --card-bg: #111;
-            --error: #ff3333;
+        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --card-bg: #111; --success: #22c55e; --error: #ff3333; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        #player-badge {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 10px 20px; border-radius: 50px;
+            border: 1px solid var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue);
+            font-weight: bold; font-size: 14px; display: none; z-index: 100;
         }
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg-dark);
-            color: white;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+        #app { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 85%; max-width: 400px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 30px rgba(188, 19, 254, 0.3); }
+        
+        h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 25px; }
+        input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; font-size: 16px; }
+        
+        .btn { width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 15px; }
+        .btn-purple { background: var(--neon-purple); color: white; }
+        .btn-blue { background: var(--neon-blue); color: #000; }
+        .btn:disabled { background: #222 !important; color: #555 !important; cursor: not-allowed; }
 
-        #app {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 25px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            border: 2px solid var(--neon-purple);
-            box-shadow: 0 0 25px rgba(188, 19, 254, 0.4);
-        }
-
-        .online-tag {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: bold;
-            background: #22c55e;
-            color: black;
-            margin-bottom: 20px;
-        }
-
-        input {
-            width: 100%;
-            padding: 16px;
-            margin: 10px 0;
-            background: #000;
-            border: 1px solid #333;
-            color: #fff;
-            border-radius: 12px;
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        input:focus { border-color: var(--neon-blue); }
-
-        .btn {
-            width: 100%;
-            padding: 18px;
-            border: none;
-            border-radius: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-create { background: var(--neon-purple); color: white; }
-        .btn-join { background: var(--neon-blue); color: #000; }
-        .btn-start { background: #22c55e; color: white; font-size: 16px; }
-        .btn:disabled { background: #222; color: #444; cursor: not-allowed; }
-
-        .room-box {
-            background: #000;
-            border: 1px solid var(--neon-purple);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-        }
-
-        #link-display {
-            font-size: 11px;
-            color: var(--neon-blue);
-            background: #1a1a1a;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            word-break: break-all;
-            margin-top: 10px;
-        }
-
-        .hidden { display: none !important; }
-
-        .loading-ring {
-            width: 30px; height: 30px;
-            border: 3px solid rgba(3, 233, 244, 0.3);
-            border-top: 3px solid var(--neon-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 15px auto;
-        }
+        .spinner { width: 45px; height: 45px; border: 4px solid rgba(3, 233, 244, 0.1); border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .room-box { background: #000; border: 1px dashed var(--neon-purple); padding: 20px; border-radius: 20px; margin: 25px 0; }
+        .hidden { display: none !important; }
+        #msg-erro-servidor { color: var(--error); font-weight: bold; margin-top: 15px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div id="app">
-    <div class="online-tag">SERVIDOR ONLINE</div>
+<div id="player-badge">👤 PLAYERS: <span id="count-val">1</span>/20</div>
 
+<div id="app">
     <div id="tela-login">
-        <h1 style="color:var(--neon-blue); letter-spacing: 2px;">ELITE QUIZ</h1>
-        <input type="text" id="username" placeholder="SEU APELIDO...">
-        <button class="btn btn-create" onclick="mostrar('tela-config')">CRIAR SALA</button>
-        <button class="btn btn-join" onclick="mostrar('tela-entrar')">ENTRAR EM SALA</button>
+        <h1>ELITE QUIZ</h1>
+        <input type="text" id="username" placeholder="SEU NOME..." oninput="valida()">
+        <button id="btn-c" class="btn btn-purple" onclick="ir('tela-config')" disabled>CRIAR ARENA</button>
+        <button id="btn-e" class="btn btn-blue" onclick="ir('tela-entrar')" disabled>ENTRAR EM SALA</button>
     </div>
 
     <div id="tela-config" class="hidden">
-        <h2>Nova Sala</h2>
-        <input type="password" id="senha-nova" placeholder="SENHA DA SALA">
-        <button class="btn btn-create" onclick="criarSala()">CRIAR AGORA</button>
-        <button class="btn" style="background:none; color:gray" onclick="mostrar('tela-login')">VOLTAR</button>
+        <h2>Nova Sala Online</h2>
+        <button class="btn btn-purple" onclick="iniciarSala()">GERAR CÓDIGO DA ARENA</button>
+        <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
     <div id="tela-entrar" class="hidden">
-        <h2>Entrar na Arena</h2>
-        <input type="text" id="cod-input" placeholder="CÓDIGO">
-        <input type="password" id="senha-input" placeholder="SENHA">
-        <div id="buscando" class="hidden">
-            <div class="loading-ring"></div>
-            <p style="font-size:12px; color:var(--neon-blue)">Buscando player online...</p>
-        </div>
-        <button id="btn-conectar" class="btn btn-join" onclick="conectar()">CONECTAR</button>
-        <button id="btn-voltar-entrar" class="btn" style="background:none; color:gray" onclick="mostrar('tela-login')">VOLTAR</button>
+        <h2>Localizar Sala</h2>
+        <input type="text" id="join-id" placeholder="DIGITE O CÓDIGO">
+        <div id="msg-erro-servidor" class="hidden">Servidor não achado tente novamente!</div>
+        <button id="btn-conectar-entrar" class="btn btn-blue" onclick="conectarComLoading()">CONECTAR AGORA</button>
+        <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
+    </div>
+
+    <div id="tela-loading" class="hidden">
+        <div class="spinner"></div>
+        <h3 style="color:var(--neon-blue)">CONECTANDO AO SERVIDOR...</h3>
     </div>
 
     <div id="tela-lobby" class="hidden">
-        <h1 id="cod-lobby" style="color:var(--neon-purple); margin:0;">----</h1>
+        <h2 id="room-id-txt" style="color:var(--neon-purple); font-size: 32px; margin:0;">----</h2>
         <div class="room-box">
-            <p style="font-size:12px; margin:0;">LINK DE CONVITE (TOQUE PARA COPIAR):</p>
-            <div id="link-display" onclick="copiar()">...</div>
+            <p style="font-size:11px; color: gray; margin-bottom: 5px;">CÓDIGO DA ARENA:</p>
+            <div id="copy-box" style="color:var(--neon-blue); font-size: 22px; font-weight: bold; cursor: pointer;" onclick="copy()">----</div>
         </div>
-        <p id="p-count">Jogadores: 1 / 20</p>
-        <p id="status-wait" style="color:var(--error); font-size: 12px;">Aguardando outro player online...</p>
-        <button id="btn-start" class="btn btn-start" disabled onclick="alert('Iniciando!')">COMEÇAR JOGO</button>
+        <p id="wait-msg" style="color: #ff3333;">Aguardando oponente...</p>
+        <button id="btn-start" class="btn" style="background:var(--success); color:white;" disabled>COMEÇAR PARTIDA</button>
     </div>
 </div>
 
 <script>
-    let salaReal = null;
+    let peer, conn, meuID;
 
-    function mostrar(id) {
-        document.querySelectorAll('#tela-login, #tela-config, #tela-entrar, #tela-lobby').forEach(t => t.classList.add('hidden'));
+    peer = new Peer(Math.floor(1000 + Math.random() * 9000).toString(36).toUpperCase());
+    peer.on('open', (id) => { meuID = id; });
+
+    function valida() {
+        const n = document.getElementById('username').value.trim();
+        document.getElementById('btn-c').disabled = n.length < 2;
+        document.getElementById('btn-e').disabled = n.length < 2;
+    }
+
+    function ir(id) {
+        document.querySelectorAll('#tela-login, #tela-config, #tela-entrar, #tela-lobby, #tela-loading').forEach(t => t.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
     }
 
-    function criarSala() {
-        const pass = document.getElementById('senha-nova').value;
-        if(!pass) return alert("Defina uma senha!");
-        
-        const cod = Math.random().toString(36).substring(2, 6).toUpperCase();
-        salaReal = { id: cod, senha: pass }; // Registra a sala no "servidor" local
-        
-        document.getElementById('cod-lobby').innerText = "SALA: " + cod;
-        document.getElementById('link-display').innerText = window.location.href.split('?')[0] + "?sala=" + cod;
-        
-        mostrar('tela-lobby');
+    function iniciarSala() {
+        document.getElementById('room-id-txt').innerText = "SALA: " + meuID;
+        document.getElementById('copy-box').innerText = meuID;
+        document.getElementById('player-badge').style.display = 'block';
+        ir('tela-lobby');
+        peer.on('connection', (c) => { conn = c; finaliza(); });
     }
 
-    function conectar() {
-        const c = document.getElementById('cod-input').value.toUpperCase();
-        const s = document.getElementById('senha-input').value;
-        
-        document.getElementById('buscando').classList.remove('hidden');
-        document.getElementById('btn-conectar').classList.add('hidden');
-        document.getElementById('btn-voltar-entrar').classList.add('hidden');
+    function conectarComLoading() {
+        const idAlvo = document.getElementById('join-id').value.toUpperCase();
+        if(!idAlvo) return;
+
+        document.getElementById('msg-erro-servidor').classList.add('hidden');
+        ir('tela-loading');
 
         setTimeout(() => {
-            // VALIDAÇÃO REAL: Se o código não for o que foi criado, ele NÃO ENTRA
-            if (salaReal && c === salaReal.id && s === salaReal.senha) {
-                mostrar('tela-lobby');
-                document.getElementById('p-count').innerText = "Jogadores: 2 / 20";
-                document.getElementById('status-wait').innerText = "PLAYER ONLINE CONECTADO!";
-                document.getElementById('status-wait').style.color = "#22c55e";
-                document.getElementById('btn-start').disabled = false;
-            } else {
-                alert("ERRO: Sala não encontrada ou offline!");
-                document.getElementById('buscando').classList.add('hidden');
-                document.getElementById('btn-conectar').classList.remove('hidden');
-                document.getElementById('btn-voltar-entrar').classList.remove('hidden');
-            }
-        }, 2000);
+            conn = peer.connect(idAlvo);
+            
+            // Tenta validar a conexão
+            let sucesso = false;
+            conn.on('open', () => {
+                sucesso = true;
+                finaliza();
+            });
+
+            // Se em 5 segundos não conectar, mostra o erro que você pediu
+            setTimeout(() => {
+                if(!sucesso) {
+                    ir('tela-entrar');
+                    document.getElementById('msg-erro-servidor').classList.remove('hidden');
+                }
+            }, 5000);
+        }, 1200);
     }
 
-    function copiar() {
-        const link = document.getElementById('link-display').innerText;
-        navigator.clipboard.writeText(link);
-        alert("Link copiado! Envie para o outro player.");
+    function finaliza() {
+        ir('tela-lobby');
+        document.getElementById('player-badge').style.display = 'block';
+        document.getElementById('count-val').innerText = "2";
+        document.getElementById('wait-msg').innerText = "OPONENTE ONLINE!";
+        document.getElementById('wait-msg').style.color = "var(--success)";
+        document.getElementById('btn-start').disabled = false;
+    }
+
+    function copy() {
+        navigator.clipboard.writeText(document.getElementById('copy-box').innerText);
+        alert("Copiado!");
     }
 </script>
 </body>
