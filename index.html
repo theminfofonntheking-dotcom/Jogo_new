@@ -9,21 +9,16 @@
         :root { --primary: #e74c3c; --bg: #0f0f1a; --card: #1c1c2d; }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         #game-container { background: var(--card); width: 95%; max-width: 500px; padding: 25px; border-radius: 30px; border: 3px solid #3b3b55; position: relative; box-sizing: border-box; }
-        
         .config-icon { position: absolute; top: -55px; right: 5px; font-size: 32px; cursor: pointer; background: var(--card); padding: 10px; border-radius: 50%; border: 2px solid #3b3b55; z-index: 100; }
-        
         .screen { display: none; flex-direction: column; gap: 12px; }
         .active { display: flex !important; }
-
         input, select { width: 100%; padding: 15px; border-radius: 12px; border: none; background: #2a2a40; color: #fff; font-size: 16px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #7289da; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
-
-        /* Abas Configurações */
+        button { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #7289da; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
+        
         .tab-container { display: flex; gap: 5px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 10px; background: #3b3b55; border-radius: 10px; font-size: 11px; cursor: pointer; text-align: center; }
-        .active-tab { background: var(--primary) !important; font-weight: bold; }
+        .active-tab { background: var(--primary) !important; }
 
-        /* Cores e Chat */
         .color-row { display: flex; justify-content: space-between; align-items: center; background: #1c1c2d; padding: 12px; border-radius: 12px; margin-bottom: 5px; border: 1px solid #444; cursor: pointer; }
         .color-rainbow { background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; color: transparent; animation: rainbow 2s infinite; font-weight: bold; }
         @keyframes rainbow { 0%{filter: hue-rotate(0deg)} 100%{filter: hue-rotate(360deg)} }
@@ -44,17 +39,13 @@
                 <div class="tab-btn active-tab" id="btn-col" onclick="switchTab('colors')">LOJA</div>
                 <div class="tab-btn" id="btn-lan" onclick="switchTab('lang')">PAÍS</div>
             </div>
-
             <div id="tab-colors">
-                <p>💰 Minhas Moedas: <span id="my-money">0</span></p>
-                <div style="max-height: 200px; overflow-y: auto;">
-                    <div class="color-row" onclick="setColor('white')"><span>Branco</span> <span style="color:green">Grátis</span></div>
-                    <div class="color-row" onclick="setColor('black')"><span>Preto</span> <span style="color:green">Grátis</span></div>
-                    <div class="color-row" onclick="buyColor('gold', 200)"><span class="color-gold">Dourado ✨</span> <span>200💰</span></div>
-                    <div class="color-row" onclick="buyColor('rainbow', 400)"><span class="color-rainbow">Colorido 🌈</span> <span>400💰</span></div>
-                </div>
+                <p>💰 Moedas: <span id="my-money">0</span></p>
+                <div class="color-row" onclick="setColor('white')"><span>Branco</span> <span style="color:green">Grátis</span></div>
+                <div class="color-row" onclick="setColor('black')"><span>Preto</span> <span style="color:green">Grátis</span></div>
+                <div class="color-row" onclick="buyColor('gold', 200)"><span class="color-gold">Dourado ✨</span> <span>200💰</span></div>
+                <div class="color-row" onclick="buyColor('rainbow', 400)"><span class="color-rainbow">Colorido 🌈</span> <span>400💰</span></div>
             </div>
-
             <div id="tab-lang" style="display:none;">
                 <select id="country-select" onchange="myCountry = this.value">
                     <option value="🇧🇷">Brasil 🇧🇷</option>
@@ -82,18 +73,18 @@
             <div style="background:#1c1c2d; padding:15px; border-radius:15px; margin-top:10px">
                 <input type="text" id="join-id" placeholder="©️ Código da Sala">
                 <input type="password" id="join-pass-input" placeholder="🔒 Digite a Senha">
-                <button onclick="joinRoom()" style="margin-top:10px">ENTRAR</button>
+                <button id="join-btn" onclick="joinRoom()" style="margin-top:10px">ENTRAR</button>
             </div>
         </div>
 
         <div id="game-screen" class="screen">
             <div style="display:flex; justify-content:space-between; align-items:center">
-                <span id="player-counter" style="color:#f1c40f; font-weight:bold">1/--</span>
+                <span id="player-counter">1/--</span>
                 <button onclick="leaveRoom()" style="width:auto; padding:8px 15px; font-size:11px; background:#c0392b">SAIR DA SALA</button>
             </div>
             <div id="chat-box"></div>
             <div style="display:flex; gap:5px">
-                <input type="text" id="chat-input" placeholder="Mensagem...">
+                <input type="text" id="chat-input" placeholder="Chat...">
                 <button onclick="sendMsg()" style="width:60px; background:#f39c12">OK</button>
             </div>
             <button id="voice-btn" onclick="toggleVoice()" style="background:#444; height:65px">VOICE: DESLIGADO 🔇</button>
@@ -116,8 +107,6 @@
     function switchTab(tab) {
         document.getElementById('tab-colors').style.display = tab === 'colors' ? 'block' : 'none';
         document.getElementById('tab-lang').style.display = tab === 'lang' ? 'block' : 'none';
-        document.getElementById('btn-col').classList.toggle('active-tab', tab === 'colors');
-        document.getElementById('btn-lan').classList.toggle('active-tab', tab === 'lang');
     }
 
     async function initVoice() {
@@ -128,7 +117,7 @@
                 call.answer(myStream);
                 call.on('stream', s => { const a = new Audio(); a.srcObject = s; a.play(); });
             });
-        } catch(e) { console.log("Mic recusado"); }
+        } catch(e) { console.log("Erro mic"); }
     }
 
     function toggleVoice() {
@@ -142,13 +131,12 @@
 
     async function setupHost() {
         roomPassword = document.getElementById('room-pass').value;
-        if(!roomPassword) { alert("ERRO: Senha é obrigatória!"); return; }
+        if(!roomPassword) { alert("Senha obrigatória!"); return; }
         await initVoice();
         isHost = true;
         maxP = parseInt(document.getElementById('max-players').value);
         showScreen('game-screen');
         updateCounter(1, maxP);
-
         peer.on('connection', c => {
             c.on('data', data => {
                 if(data.type === 'auth') {
@@ -162,28 +150,48 @@
                 if(data.type === 'chat') broadcast({type:'chat', ...data});
             });
         });
-        alert("SALA CRIADA! Código: " + peer.id);
+        alert("CÓDIGO: " + peer.id);
     }
 
     async function joinRoom() {
-        const id = document.getElementById('join-id').value;
+        const id = document.getElementById('join-id').value.trim();
         const pass = document.getElementById('join-pass-input').value;
-        if(!id || !pass) { alert("Código e Senha são necessários!"); return; }
+        const btn = document.getElementById('join-btn');
+        
+        if(!id || !pass) { alert("Preencha Código e Senha!"); return; }
+        
+        btn.innerText = "CONECTANDO...";
+        btn.disabled = true;
+
         await initVoice();
         conn = peer.connect(id);
+
         conn.on('open', () => {
             conn.send({type:'auth', name: document.getElementById('player-name').value, pass: pass, country: myCountry, color: myColor});
         });
+
         conn.on('data', data => {
-            if(data.type === 'auth_ok') { maxP = data.max; showScreen('game-screen'); }
-            if(data.type === 'auth_fail') alert("Senha Incorreta!");
+            if(data.type === 'auth_ok') {
+                maxP = data.max;
+                showScreen('game-screen');
+            } else if(data.type === 'auth_fail') {
+                alert("Senha Incorreta!");
+                btn.innerText = "ENTRAR";
+                btn.disabled = false;
+            }
             if(data.type === 'chat') addMsg(data);
         });
+
+        setTimeout(() => {
+            if(document.getElementById('setup-screen').classList.contains('active')) {
+                alert("Tempo esgotado. Verifique o código!");
+                btn.innerText = "ENTRAR";
+                btn.disabled = false;
+            }
+        }, 8000);
     }
 
-    function leaveRoom() {
-        if(confirm("Deseja sair da sala?")) location.reload();
-    }
+    function leaveRoom() { location.reload(); }
 
     function sendMsg() {
         const input = document.getElementById('chat-input');
@@ -204,9 +212,9 @@
     function broadcast(data) { addMsg(data); players.forEach(p => p.conn.send(data)); }
     function showScreen(s) { document.querySelectorAll('.screen').forEach(d => d.classList.remove('active')); document.getElementById(s).classList.add('active'); }
     function updateCounter(cur, max) { document.getElementById('player-counter').innerText = cur + "/" + max; }
-    function copyCode() { navigator.clipboard.writeText(peer.id); alert("Código Copiado!"); }
+    function copyCode() { navigator.clipboard.writeText(peer.id); alert("Copiado!"); }
     function setColor(c) { myColor = c; alert("Equipado!"); }
     function buyColor(c, p) { if(myCoins >= p) { myColor = c; alert("Comprado!"); } else alert("Moedas insuficientes!"); }
 </script>
 </body>
-                                                     </html>
+</html>
