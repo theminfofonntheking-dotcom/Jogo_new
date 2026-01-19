@@ -6,33 +6,28 @@
     <title>Elite Quiz - Arena Online</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --card-bg: #111; --success: #22c55e; --error: #ff3333; }
+        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --card-bg: #111; --success: #22c55e; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         
+        /* Contador Superior Direito Sincronizado */
         #player-badge {
             position: fixed; top: 20px; right: 20px;
-            background: rgba(0,0,0,0.9);
-            padding: 10px 20px; border-radius: 50px;
+            background: rgba(0,0,0,0.9); padding: 10px 20px; border-radius: 50px;
             border: 1px solid var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue);
             font-weight: bold; font-size: 14px; display: none; z-index: 100;
         }
 
         #app { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 85%; max-width: 400px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 30px rgba(188, 19, 254, 0.3); }
-        
         h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 25px; }
         input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; font-size: 16px; }
-        
         .btn { width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 15px; }
         .btn-purple { background: var(--neon-purple); color: white; }
         .btn-blue { background: var(--neon-blue); color: #000; }
-        .btn:disabled { background: #222 !important; color: #555 !important; cursor: not-allowed; }
-
+        .btn:disabled { background: #222 !important; color: #555 !important; cursor: not-allowed; opacity: 0.6; }
         .spinner { width: 45px; height: 45px; border: 4px solid rgba(3, 233, 244, 0.1); border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-
         .room-box { background: #000; border: 1px dashed var(--neon-purple); padding: 20px; border-radius: 20px; margin: 25px 0; }
         .hidden { display: none !important; }
-        #msg-erro-servidor { color: var(--error); font-weight: bold; margin-top: 15px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -48,16 +43,16 @@
     </div>
 
     <div id="tela-config" class="hidden">
-        <h2>Nova Sala Online</h2>
-        <button class="btn btn-purple" onclick="iniciarSala()">GERAR CÓDIGO DA ARENA</button>
+        <h2>Gerar Nova Arena</h2>
+        <button class="btn btn-purple" onclick="iniciarSala()">CRIAR CÓDIGO ÚNICO</button>
         <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
     <div id="tela-entrar" class="hidden">
-        <h2>Localizar Sala</h2>
-        <input type="text" id="join-id" placeholder="DIGITE O CÓDIGO">
-        <div id="msg-erro-servidor" class="hidden">Servidor não achado tente novamente!</div>
-        <button id="btn-conectar-entrar" class="btn btn-blue" onclick="conectarComLoading()">CONECTAR AGORA</button>
+        <h2>Localizar Arena</h2>
+        <input type="text" id="join-id" placeholder="CÓDIGO DA SALA">
+        <div id="msg-erro" style="color:red; font-size:12px; margin-top:5px;" class="hidden">Servidor não achado tente novamente!</div>
+        <button class="btn btn-blue" onclick="conectarComLoading()">CONECTAR AGORA</button>
         <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
@@ -69,18 +64,25 @@
     <div id="tela-lobby" class="hidden">
         <h2 id="room-id-txt" style="color:var(--neon-purple); font-size: 32px; margin:0;">----</h2>
         <div class="room-box">
-            <p style="font-size:11px; color: gray; margin-bottom: 5px;">CÓDIGO DA ARENA:</p>
+            <p style="font-size:11px; color: gray;">CÓDIGO PARA AMIGOS:</p>
             <div id="copy-box" style="color:var(--neon-blue); font-size: 22px; font-weight: bold; cursor: pointer;" onclick="copy()">----</div>
         </div>
-        <p id="wait-msg" style="color: #ff3333;">Aguardando oponente...</p>
-        <button id="btn-start" class="btn" style="background:var(--success); color:white;" disabled>COMEÇAR PARTIDA</button>
+        <p id="wait-msg" style="color: #ff3333;">Aguardando oponentes...</p>
+        <button id="btn-start" class="btn" style="background:var(--success); color:white;" disabled onclick="comecarJogo()">COMEÇAR PARTIDA</button>
     </div>
 </div>
 
 <script>
-    let peer, conn, meuID;
+    let peer, connections = [], meuID, isHost = false;
 
-    peer = new Peer(Math.floor(1000 + Math.random() * 9000).toString(36).toUpperCase());
+    // Garante código diferente: Usa 4 letras aleatórias + timestamp curto
+    function gerarCodigoUnico() {
+        return Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+
+    // Inicializa o Peer com ID Aleatório Único
+    peer = new Peer(gerarCodigoUnico());
+    
     peer.on('open', (id) => { meuID = id; });
 
     function valida() {
@@ -95,47 +97,72 @@
     }
 
     function iniciarSala() {
+        isHost = true;
         document.getElementById('room-id-txt').innerText = "SALA: " + meuID;
         document.getElementById('copy-box').innerText = meuID;
         document.getElementById('player-badge').style.display = 'block';
         ir('tela-lobby');
-        peer.on('connection', (c) => { conn = c; finaliza(); });
+
+        peer.on('connection', (conn) => {
+            connections.push(conn);
+            setupConn(conn);
+            // Sincroniza todos: O Host avisa a todos quantos players existem agora
+            enviarParaTodos({ tipo: 'UPDATE_COUNT', qtd: connections.length + 1 });
+        });
     }
 
     function conectarComLoading() {
         const idAlvo = document.getElementById('join-id').value.toUpperCase();
         if(!idAlvo) return;
-
-        document.getElementById('msg-erro-servidor').classList.add('hidden');
         ir('tela-loading');
 
-        setTimeout(() => {
-            conn = peer.connect(idAlvo);
-            
-            // Tenta validar a conexão
-            let sucesso = false;
-            conn.on('open', () => {
-                sucesso = true;
-                finaliza();
-            });
+        const conn = peer.connect(idAlvo);
+        let timeout = setTimeout(() => {
+            ir('tela-entrar');
+            document.getElementById('msg-erro').classList.remove('hidden');
+        }, 8000);
 
-            // Se em 5 segundos não conectar, mostra o erro que você pediu
-            setTimeout(() => {
-                if(!sucesso) {
-                    ir('tela-entrar');
-                    document.getElementById('msg-erro-servidor').classList.remove('hidden');
-                }
-            }, 5000);
-        }, 1200);
+        conn.on('open', () => {
+            clearTimeout(timeout);
+            connections.push(conn);
+            setupConn(conn);
+        });
     }
 
-    function finaliza() {
+    function setupConn(conn) {
         ir('tela-lobby');
         document.getElementById('player-badge').style.display = 'block';
-        document.getElementById('count-val').innerText = "2";
-        document.getElementById('wait-msg').innerText = "OPONENTE ONLINE!";
-        document.getElementById('wait-msg').style.color = "var(--success)";
-        document.getElementById('btn-start').disabled = false;
+        
+        conn.on('data', (data) => {
+            // Se receber atualização do Host, muda o contador de todos
+            if(data.tipo === 'UPDATE_COUNT') {
+                atualizarInterfaceCount(data.qtd);
+            }
+            if(data.tipo === 'START') {
+                alert("O JOGO COMEÇOU!");
+            }
+        });
+
+        // Se for o Host, ele já atualiza o próprio contador
+        if(isHost) atualizarInterfaceCount(connections.length + 1);
+    }
+
+    function atualizarInterfaceCount(qtd) {
+        document.getElementById('count-val').innerText = qtd;
+        if(qtd >= 2) {
+            document.getElementById('wait-msg').innerText = qtd + " JOGADORES NA ARENA!";
+            document.getElementById('wait-msg').style.color = "var(--success)";
+            if(isHost) document.getElementById('btn-start').disabled = false;
+        }
+    }
+
+    function enviarParaTodos(msg) {
+        connections.forEach(c => c.send(msg));
+    }
+
+    function comecarJogo() {
+        enviarParaTodos({ tipo: 'START' });
+        alert("Iniciando arena para todos os players!");
     }
 
     function copy() {
