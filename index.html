@@ -2,177 +2,132 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O IMPOSTOR PRO 🔪</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TV CALL - REAL</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --primary: #e74c3c; --bg: #0f0f1a; --card: #1c1c2d; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-        #game-container { background: var(--card); width: 95%; max-width: 500px; padding: 25px; border-radius: 30px; border: 3px solid #3b3b55; position: relative; box-sizing: border-box; }
-        .config-icon { position: absolute; top: -55px; right: 5px; font-size: 32px; cursor: pointer; background: var(--card); padding: 10px; border-radius: 50%; border: 2px solid #3b3b55; z-index: 100; }
-        .screen { display: none; flex-direction: column; gap: 12px; }
-        .active { display: flex !important; }
-        input, select { width: 100%; padding: 15px; border-radius: 12px; border: none; background: #2a2a40; color: #fff; font-size: 16px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #7289da; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .color-rainbow { background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; color: transparent; animation: rainbow 2s infinite; font-weight: bold; }
-        @keyframes rainbow { 0%{filter: hue-rotate(0deg)} 100%{filter: hue-rotate(360deg)} }
-        .color-gold { color: #f1c40f; text-shadow: 0 0 5px gold; font-weight: bold; }
-        .name-black { background-color: #000; color: #fff !important; padding: 2px 5px; border-radius: 4px; }
-        #chat-box { height: 180px; overflow-y: auto; background: #0a0a14; padding: 10px; border-radius: 15px; border: 2px solid #3b3b55; margin-bottom: 5px; }
-        .msg { margin-bottom: 5px; font-size: 14px; }
+        :root { --accent: #ff4757; --bg: #0a0a0a; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: sans-serif; height: 100vh; overflow: hidden; }
+
+        /* Container da TV */
+        .main-container { height: 100vh; display: flex; flex-direction: column; position: relative; }
+        
+        #remote-video-container { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Câmera pequena (sua) */
+        #local-video { 
+            position: absolute; top: 20px; right: 20px; width: 110px; height: 150px; 
+            border-radius: 15px; border: 2px solid rgba(255,255,255,0.4); z-index: 10; background: #222;
+        }
+
+        /* Status e Info */
+        .info-overlay { position: absolute; top: 25px; left: 20px; z-index: 10; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); }
+
+        /* Botão Passar */
+        .controls { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; z-index: 20; }
+        .btn-next { 
+            background: var(--accent); width: 80px; height: 80px; border-radius: 50%; border: none;
+            color: white; font-size: 40px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5); transition: 0.2s;
+        }
+        .btn-next:active { transform: scale(0.9); }
+
+        /* Animação de Troca */
+        .slide-out { transform: translateX(-100%); transition: 0.3s ease-in; }
+        
+        #loading-overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .start-btn { padding: 20px 40px; border-radius: 50px; border: none; background: white; color: black; font-weight: bold; font-size: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div class="config-icon" onclick="toggleSettings()">⚙️</div>
+    <div id="loading-overlay">
+        <h1 style="color: #ff4757; margin-bottom: 30px;">📺 TV CALL</h1>
+        <button class="start-btn" onclick="iniciarApp()">COMEÇAR CALL</button>
+        <p style="color: #666; margin-top: 20px;">Clique para ativar câmera</p>
+    </div>
 
-        <div id="settings-panel" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; background:#2a2a40; padding:20px; border-radius:20px; z-index:500; border:2px solid #fff;">
-            <p>Moedas: <span id="my-money">0</span>💰</p>
-            <div class="color-row" onclick="setColor('white')">Branco</div>
-            <div class="color-row" onclick="setColor('black')">Preto</div>
-            <div class="color-row" onclick="buyColor('gold', 200)" class="color-gold">Dourado</div>
-            <div class="color-row" onclick="buyColor('rainbow', 400)" class="color-rainbow">Arco-íris</div>
-            <button onclick="toggleSettings()" style="margin-top:10px">FECHAR</button>
+    <div class="main-container">
+        <div class="info-overlay" id="status-tag">Procurando...</div>
+        
+        <div id="remote-video-container">
+            <video id="remote-video" autoplay playsinline poster="https://media.giphy.com/media/o8igknyuKs6aY/giphy.gif"></video>
+            <video id="local-video" autoplay playsinline muted></video>
         </div>
 
-        <div id="setup-screen" class="screen active">
-            <h1 style="text-align:center">O IMPOSTOR PRO</h1>
-            <input type="text" id="player-name" placeholder="Nome">
-            <select id="max-players">
-                <option value="2">2 JOGADORES</option>
-                <option value="3" selected>3 JOGADORES</option>
-                <option value="5">5 JOGADORES</option>
-            </select>
-            <input type="password" id="room-pass" placeholder="Senha da Sala">
-            <button onclick="setupHost()" style="background:#27ae60">CRIAR SALA</button>
-            <hr style="width:100%; border:1px solid #333">
-            <input type="text" id="join-id" placeholder="Código">
-            <input type="password" id="join-pass-input" placeholder="Senha">
-            <button onclick="joinRoom()">ENTRAR</button>
-        </div>
-
-        <div id="game-screen" class="screen">
-            <div style="display:flex; justify-content:space-between">
-                <span id="player-counter">1/--</span>
-                <button onclick="location.reload()" style="width:auto; padding:5px; background:red">SAIR</button>
-            </div>
-            
-            <div id="role-area" style="background:#444; padding:15px; border-radius:10px; text-align:center; font-weight:bold; color:#f1c40f">
-                AGUARDANDO INÍCIO...
-            </div>
-
-            <button id="start-btn" onclick="startGame()" style="display:none; background:#f1c40f; color:#000">GERAR PALAVRA 🔑</button>
-
-            <div id="chat-box"></div>
-            <div style="display:flex; gap:5px">
-                <input type="text" id="chat-input" placeholder="...">
-                <button onclick="sendMsg()" style="width:60px">OK</button>
-            </div>
-            <button id="voice-btn" onclick="toggleVoice()" style="background:#444">VOICE: DESLIGADO 🔇</button>
-            <button onclick="navigator.clipboard.writeText(peer.id); alert('Copiado!')" style="font-size:10px">COPIAR CÓDIGO ©️</button>
+        <div class="controls">
+            <button class="btn-next" onclick="passarPessoa()">></button>
         </div>
     </div>
 
 <script>
-    let peer = new Peer(), conn, myStream, isHost = false, players = [], maxP = 3, micOn = false;
-    let myColor = 'white', myCountry = '🇧🇷', myCoins = 0;
-    const palavras = ["Cachorro", "Pizza", "Futebol", "Escola", "Celular", "Avião", "Praia"];
+    let peer;
+    let localStream;
+    let currentCall;
 
-    async function initVoice() {
+    async function iniciarApp() {
         try {
-            myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            myStream.getAudioTracks()[0].enabled = false;
-            peer.on('call', call => {
-                call.answer(myStream);
-                call.on('stream', s => { const a = new Audio(); a.srcObject = s; a.play(); });
-            });
-        } catch(e) { alert("Permita o Microfone!"); }
+            // Liga a câmera de verdade
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('loading-overlay').style.display = 'none';
+            
+            configurarConexao();
+        } catch (err) {
+            alert("Erro: Permita o acesso à câmera e microfone!");
+        }
     }
 
-    function toggleVoice() {
-        if(!myStream) return;
-        micOn = !micOn;
-        myStream.getAudioTracks()[0].enabled = micOn;
-        document.getElementById('voice-btn').style.background = micOn ? '#27ae60' : '#444';
-        document.getElementById('voice-btn').innerText = micOn ? "VOICE: LIGADO 🎤" : "VOICE: DESLIGADO 🔇";
-    }
+    function configurarConexao() {
+        // PeerJS cria a conexão real entre você e outras pessoas
+        peer = new Peer(); 
 
-    function setupHost() {
-        if(!document.getElementById('room-pass').value) return alert("Senha obrigatória!");
-        isHost = true;
-        maxP = parseInt(document.getElementById('max-players').value);
-        initVoice();
-        document.getElementById('start-btn').style.display = 'block';
-        showScreen('game-screen');
-        updateCounter();
+        peer.on('open', (id) => {
+            console.log("Seu ID real:", id);
+            document.getElementById('status-tag').innerText = "Online";
+        });
 
-        peer.on('connection', c => {
-            c.on('data', data => {
-                if(data.type === 'auth' && data.pass === document.getElementById('room-pass').value) {
-                    players.push({id: c.peer, conn: c, name: data.name});
-                    c.send({type:'auth_ok', max: maxP});
-                    peer.call(c.peer, myStream); // Liga para quem entrou
-                    updateCounter();
-                }
-            });
-            c.on('close', () => { 
-                players = players.filter(p => p.id !== c.peer); 
-                updateCounter(); 
-            });
+        // Receber call de alguém
+        peer.on('call', (call) => {
+            call.answer(localStream);
+            handleCall(call);
         });
     }
 
-    function joinRoom() {
-        initVoice();
-        conn = peer.connect(document.getElementById('join-id').value);
-        conn.on('open', () => {
-            conn.send({type:'auth', pass: document.getElementById('join-pass-input').value, name: document.getElementById('player-name').value});
-        });
-        conn.on('data', data => {
-            if(data.type === 'auth_ok') { maxP = data.max; showScreen('game-screen'); }
-            if(data.type === 'role') { document.getElementById('role-area').innerText = data.msg; }
-            if(data.type === 'chat') addMsg(data);
+    function handleCall(call) {
+        if (currentCall) currentCall.close();
+        currentCall = call;
+
+        call.on('stream', (remoteStream) => {
+            document.getElementById('remote-video').srcObject = remoteStream;
+            document.getElementById('status-tag').innerText = "● Ao Vivo";
         });
     }
 
-    function startGame() {
-        if(players.length < 1) return alert("Precisa de mais gente!");
-        const palavra = palavras[Math.floor(Math.random() * palavras.length)];
-        const all = [peer.id, ...players.map(p => p.id)];
-        const impostor = all[Math.floor(Math.random() * all.length)];
+    function passarPessoa() {
+        const video = document.getElementById('remote-video');
         
-        const sendRole = (id, msg) => {
-            if(id === peer.id) document.getElementById('role-area').innerText = msg;
-            else players.find(p => p.id === id).conn.send({type:'role', msg: msg});
-        };
+        // Efeito de deslizar a tela
+        video.classList.add('slide-out');
+        document.getElementById('status-tag').innerText = "Buscando...";
 
-        all.forEach(id => {
-            if(id === impostor) sendRole(id, "VOCÊ É O IMPOSTOR! 🔪");
-            else sendRole(id, "PALAVRA: " + palavra);
-        });
+        setTimeout(() => {
+            video.classList.remove('slide-out');
+            video.srcObject = null; // Limpa o vídeo atual
+            
+            // Aqui ele buscaria um novo ID de pessoa real
+            console.log("Passou para o próximo");
+        }, 300);
     }
 
-    function updateCounter() {
-        const total = players.length + 1;
-        document.getElementById('player-counter').innerText = total + "/" + maxP;
-    }
-
-    function sendMsg() {
-        const txt = document.getElementById('chat-input').value;
-        const data = {type:'chat', name: document.getElementById('player-name').value, text: txt, color: myColor};
-        if(isHost) { addMsg(data); players.forEach(p => p.conn.send(data)); } else { conn.send(data); }
-        document.getElementById('chat-input').value = "";
-    }
-
-    function addMsg(data) {
-        document.getElementById('chat-box').innerHTML += `<div><b>${data.name}:</b> ${data.text}</div>`;
-        document.getElementById('chat-box').scrollTop = 9999;
-    }
-
-    function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-    function toggleSettings() { const s = document.getElementById('settings-panel'); s.style.display = s.style.display === 'none' ? 'block' : 'none'; }
-    function setColor(c) { myColor = c; }
+    // Swipe para o lado (Gesto de passar)
+    let touchX = 0;
+    document.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+    document.addEventListener('touchend', e => {
+        if (touchX - e.changedTouches[0].clientX > 70) passarPessoa();
+    });
 </script>
 </body>
 </html>
