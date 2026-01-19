@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>INFILTRADO - VERSÃO FINAL</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: #0f0f1a; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #game-container { background: #1c1c2d; width: 95%; max-width: 450px; padding: 25px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); border: 2px solid #3b3b55; box-sizing: border-box; }
+        .active { display: block !important; }
+        .screen { display: none; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; background: #2a2a40; color: #fff; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; border-radius: 10px; border: none; background: #7289da; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
+        button.host { background: #43b581; }
+        button.send-btn { width: 90px; background: #f39c12; margin: 0; }
+        #chat-box { height: 250px; overflow-y: auto; background: #0f0f1a; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #3b3b55; }
+        .msg { margin-bottom: 10px; line-height: 1.4; border-bottom: 1px solid #222; padding-bottom: 5px; word-wrap: break-word; }
+        .msg.sys { color: #f1c40f; font-weight: bold; }
+        .role-area { padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 18px; }
+        #timer { font-size: 24px; text-align: center; color: #ff4757; font-weight: bold; }
+        #replay-section { display: none; background: #2d2d44; padding: 15px; border-radius: 10px; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="setup-screen" class="screen active">
+            <h1 style="text-align: center; color: #f39c12;">🕵️ Infiltrado</h1>
+            <input type="text" id="player-name" placeholder="Seu Nome (Máx 20)" maxlength="20">
+            <button class="host" onclick="setupHost()">CRIAR SALA</button>
+            <div style="margin-top: 20px;">
+                <input type="text" id="join-id" placeholder="ID da Sala">
+                <input type="password" id="join-pass" placeholder="Senha da Sala">
+                <button onclick="joinRoom()">ENTRAR NO JOGO</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div id="timer">05:00</div>
+            <div id="role-display" class="role-area" style="background: #34495e;">AGUARDANDO... (1/3)</div>
+            
+            <div id="chat-box"></div>
+            
+            <div id="input-area" style="display: flex; gap: 5px;">
+                <input type="text" id="chat-input" placeholder="Sua pista...">
+                <button class="send-btn" onclick="sendMsg()">ENVIAR</button>
+            </div>
+
+            <div id="replay-section">
+                <p id="replay-status">Deseja jogar de novo? (0/3)</p>
+                <button id="btn-replay" onclick="voteReplay()" style="background: #27ae60;">QUERO IR DE NOVO</button>
+            </div>
+            
+            <button id="copy-btn" style="background: #555; font-size: 11px; margin-top: 15px;" onclick="copyLink()">📋 COPIAR LINK DE CONVITE</button>
+        </div>
+    </div>
+
+<script>
+    let peer = new Peer();
+    let conn, myId, isHost = false;
+    let roomPass = "", players = [], replayVotes = 0;
+    let words = ["CAFÉ", "CELULAR", "TELEVISÃO", "PIZZA", "CADEIRA"];
+    let currentWord = "";
+    let gameActive = false;
+    let timerId;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.has('room')) document.getElementById('join-id').value = urlParams.get('room');
+
+    peer.on('open', id => myId = id);
+
+    function setupHost() {
+        const p = prompt("Senha da sala:");
+        if(!p) return;
+        roomPass = p; isHost = true;
+        showScreen('game-screen');
+        addMsg("SISTEMA", "Sala criada! Aguarde seus irmãos.");
+        peer.on('connection', c => {
+            c.on('data', data => {
+                if(data.type === 'auth') {
+                    if(data.pass === roomPass) {
+                        players.push({id: c.peer, name: data.name.substring(0,20), conn: c});
+                        c.send({type: 'auth_ok'});
+                        addMsg("SISTEMA", data.name + " entrou!");
+                        updateLobbyCount();
+                        if(players.length === 2) startGame();
+                    } else c.send({type: 'auth_fail'});
+                }
+                if(data.type === 'chat') relayMsg(data.name, data.text);
+                if(data.type === 'replay_vote') handleReplayVote();
+            });
+        });
+    }
+
+    function joinRoom() {
+        const hostId = document.getElementById('join-id').value;
+        const pass = document.getElementById('join-pass').value;
+        const name = document.getElementById('player-name').value || "Jogador";
+        conn = peer.connect(hostId);
+        conn.on('open', () => conn.send({type: 'auth', pass: pass, name: name.substring(0,20)}));
+        conn.on('data', data => {
+            if(data.type === 'auth_ok') showScreen('game-screen');
+            if(data.type === 'auth_fail') alert("Senha incorreta!");
+            if(data.type === 'start') handleStart(data);
+            if(data.type === 'chat') addMsg(data.name, data.text);
+            if(data.type === 'reset') resetClient();
+            if(data.type === 'replay_status') document.getElementById('replay-status').innerText = `Deseja jogar de novo? (${data.count}/3)`;
+        });
+    }
+
+    function startGame() {
+        gameActive = true;
+        replayVotes = 0;
+        currentWord = words[Math.floor(Math.random()*words.length)];
+        const impIdx = Math.floor(Math.random() * 3);
+        
+        const hostIsImp = (impIdx === 0);
+        updateRoleDisplay(hostIsImp ? "VOCÊ É O IMPOSTOR!" : "PALAVRA: " + currentWord, hostIsImp);
+        
+        players.forEach((p, i) => {
+            p.conn.send({type: 'start', isImp: (impIdx === i+1), word: currentWord});
+        });
+        startTimer();
+        document.getElementById('replay-section').style.display = 'none';
+    }
+
+    function handleStart(data) {
+        updateRoleDisplay(data.isImp ? "VOCÊ É O IMPOSTOR!" : "PALAVRA: " + data.word, data.isImp);
+        startTimer();
+        document.getElementById('replay-section').style.display = 'none';
+    }
+
+    function voteReplay() {
+        document.getElementById('btn-replay').disabled = true;
+        document.getElementById('btn-replay').style.opacity = "0.5";
+        if(isHost) handleReplayVote();
+        else conn.send({type: 'replay_vote'});
+    }
+
+    function handleReplayVote() {
+        replayVotes++;
+        const statusText = `Deseja jogar de novo? (${replayVotes}/3)`;
+        document.getElementById('replay-status').innerText = statusText;
+        if(isHost) {
+            players.forEach(p => p.conn.send({type: 'replay_status', count: replayVotes}));
+            if(replayVotes >= 3) {
+                players.forEach(p => p.conn.send({type: 'reset'}));
+                resetClient();
+                startGame();
+            }
+        }
+    }
+
+    function resetClient() {
+        clearInterval(timerId);
+        document.getElementById('chat-box').innerHTML = "";
+        document.getElementById('btn-replay').disabled = false;
+        document.getElementById('btn-replay').style.opacity = "1";
+        document.getElementById('timer').innerText = "05:00";
+    }
+
+    function startTimer() {
+        clearInterval(timerId);
+        let t = 300;
+        timerId = setInterval(() => {
+            if(t > 0) {
+                t--;
+                let m = Math.floor(t/60), s = t%60;
+                document.getElementById('timer').innerText = `${m}:${s<10?'0':''}${s}`;
+            } else {
+                clearInterval(timerId);
+                document.getElementById('replay-section').style.display = 'block';
+                addMsg("SISTEMA", "TEMPO ESGOTADO! VOTEM NO IMPOSTOR.");
+            }
+        }, 1000);
+    }
+
+    // --- FUNÇÕES AUXILIARES ---
+    function updateRoleDisplay(t, imp) {
+        const d = document.getElementById('role-display');
+        d.innerText = t; d.style.background = imp ? "#e74c3c" : "#27ae60";
+    }
+    function updateLobbyCount() {
+        document.getElementById('role-display').innerText = `AGUARDANDO... (${players.length+1}/3)`;
+    }
+    function sendMsg() {
+        const i = document.getElementById('chat-input');
+        if(!i.value.trim()) return;
+        const n = document.getElementById('player-name').value || "Anon";
+        if(isHost) relayMsg(n, i.value); else conn.send({type: 'chat', name: n, text: i.value});
+        i.value = "";
+    }
+    function relayMsg(n, t) {
+        addMsg(n, t); if(isHost) players.forEach(p => p.conn.send({type: 'chat', name: n, text: t}));
+    }
+    function addMsg(n, t) {
+        const b = document.getElementById('chat-box');
+        b.innerHTML += `<div class="msg ${n==='SISTEMA'?'sys':''}"><b>${n.substring(0,20)}:</b> ${t}</div>`;
+        b.scrollTop = b.scrollHeight;
+    }
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+    function copyLink() {
+        const link = window.location.href.split('?')[0] + "?room=" + myId;
+        navigator.clipboard.writeText(link);
+        alert("Link copiado!");
+    }
+    document.getElementById('chat-input').onkeypress = e => { if(e.key==='Enter') sendMsg() };
+</script>
+</body>
+</html>
