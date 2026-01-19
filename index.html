@@ -6,10 +6,9 @@
     <title>Elite Quiz - Arena Online</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --card-bg: #111; --success: #22c55e; }
+        :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --success: #22c55e; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         
-        /* Contador Superior Direito Sincronizado */
         #player-badge {
             position: fixed; top: 20px; right: 20px;
             background: rgba(0,0,0,0.9); padding: 10px 20px; border-radius: 50px;
@@ -17,16 +16,18 @@
             font-weight: bold; font-size: 14px; display: none; z-index: 100;
         }
 
-        #app { background: var(--card-bg); padding: 40px; border-radius: 30px; width: 85%; max-width: 400px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 30px rgba(188, 19, 254, 0.3); }
-        h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 25px; }
-        input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; font-size: 16px; }
+        #app { background: #111; padding: 40px; border-radius: 30px; width: 85%; max-width: 400px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 30px rgba(188, 19, 254, 0.3); }
+        h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; }
+        input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; }
+        
         .btn { width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 15px; }
         .btn-purple { background: var(--neon-purple); color: white; }
         .btn-blue { background: var(--neon-blue); color: #000; }
-        .btn:disabled { background: #222 !important; color: #555 !important; cursor: not-allowed; opacity: 0.6; }
-        .spinner { width: 45px; height: 45px; border: 4px solid rgba(3, 233, 244, 0.1); border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+        .btn-start { background: var(--success); color: white; display: none; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .loading { width: 40px; height: 40px; border: 4px solid #222; border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .room-box { background: #000; border: 1px dashed var(--neon-purple); padding: 20px; border-radius: 20px; margin: 25px 0; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -37,58 +38,53 @@
 <div id="app">
     <div id="tela-login">
         <h1>ELITE QUIZ</h1>
-        <input type="text" id="username" placeholder="SEU NOME..." oninput="valida()">
-        <button id="btn-c" class="btn btn-purple" onclick="ir('tela-config')" disabled>CRIAR ARENA</button>
-        <button id="btn-e" class="btn btn-blue" onclick="ir('tela-entrar')" disabled>ENTRAR EM SALA</button>
+        <input type="text" id="username" placeholder="SEU NOME..." oninput="check()">
+        <button id="bc" class="btn btn-purple" onclick="ir('tela-config')" disabled>CRIAR ARENA</button>
+        <button id="be" class="btn btn-blue" onclick="ir('tela-entrar')" disabled>ENTRAR EM SALA</button>
     </div>
 
     <div id="tela-config" class="hidden">
-        <h2>Gerar Nova Arena</h2>
-        <button class="btn btn-purple" onclick="iniciarSala()">CRIAR CÓDIGO ÚNICO</button>
-        <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
+        <h2>Criar Arena</h2>
+        <button class="btn btn-purple" onclick="criarHost()">GERAR CÓDIGO</button>
+        <button class="btn" style="background:none; color:gray" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
     <div id="tela-entrar" class="hidden">
         <h2>Localizar Arena</h2>
         <input type="text" id="join-id" placeholder="CÓDIGO DA SALA">
-        <div id="msg-erro" style="color:red; font-size:12px; margin-top:5px;" class="hidden">Servidor não achado tente novamente!</div>
-        <button class="btn btn-blue" onclick="conectarComLoading()">CONECTAR AGORA</button>
-        <button class="btn" style="background:transparent; color:#666" onclick="ir('tela-login')">VOLTAR</button>
+        <p id="error-msg" style="color:red; font-size:12px; display:none">Servidor não achado tente novamente!</p>
+        <button class="btn btn-blue" onclick="conectar()">CONECTAR AGORA</button>
+        <button class="btn" style="background:none; color:gray" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
     <div id="tela-loading" class="hidden">
-        <div class="spinner"></div>
-        <h3 style="color:var(--neon-blue)">CONECTANDO AO SERVIDOR...</h3>
+        <div class="loading"></div>
+        <p>CONECTANDO AO SERVIDOR...</p>
     </div>
 
     <div id="tela-lobby" class="hidden">
-        <h2 id="room-id-txt" style="color:var(--neon-purple); font-size: 32px; margin:0;">----</h2>
-        <div class="room-box">
-            <p style="font-size:11px; color: gray;">CÓDIGO PARA AMIGOS:</p>
-            <div id="copy-box" style="color:var(--neon-blue); font-size: 22px; font-weight: bold; cursor: pointer;" onclick="copy()">----</div>
-        </div>
-        <p id="wait-msg" style="color: #ff3333;">Aguardando oponentes...</p>
-        <button id="btn-start" class="btn" style="background:var(--success); color:white;" disabled onclick="comecarJogo()">COMEÇAR PARTIDA</button>
+        <h2 id="room-id-display" style="color:var(--neon-purple); font-size: 35px; margin: 10px 0;">----</h2>
+        <p style="font-size: 12px; color: gray;">Compartilhe o código acima</p>
+        <p id="wait-txt" style="color: #ff3333; margin: 20px 0;">Aguardando oponentes...</p>
+        <button id="btn-start" class="btn btn-start" onclick="alert('Iniciando Partida!')">COMEÇAR PARTIDA</button>
     </div>
 </div>
 
 <script>
-    let peer, connections = [], meuID, isHost = false;
+    let peer, connections = [], isHost = false;
 
-    // Garante código diferente: Usa 4 letras aleatórias + timestamp curto
-    function gerarCodigoUnico() {
-        return Math.random().toString(36).substring(2, 6).toUpperCase();
+    // Inicia o sistema com ID único
+    function init() {
+        const id = Math.random().toString(36).substring(2, 6).toUpperCase();
+        peer = new Peer(id);
+        peer.on('open', () => console.log("Seu ID: " + id));
     }
+    init();
 
-    // Inicializa o Peer com ID Aleatório Único
-    peer = new Peer(gerarCodigoUnico());
-    
-    peer.on('open', (id) => { meuID = id; });
-
-    function valida() {
-        const n = document.getElementById('username').value.trim();
-        document.getElementById('btn-c').disabled = n.length < 2;
-        document.getElementById('btn-e').disabled = n.length < 2;
+    function check() {
+        const v = document.getElementById('username').value.length >= 2;
+        document.getElementById('bc').disabled = !v;
+        document.getElementById('be').disabled = !v;
     }
 
     function ir(id) {
@@ -96,78 +92,64 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
-    function iniciarSala() {
+    function criarHost() {
         isHost = true;
-        document.getElementById('room-id-txt').innerText = "SALA: " + meuID;
-        document.getElementById('copy-box').innerText = meuID;
+        document.getElementById('room-id-display').innerText = peer.id;
         document.getElementById('player-badge').style.display = 'block';
         ir('tela-lobby');
 
         peer.on('connection', (conn) => {
             connections.push(conn);
-            setupConn(conn);
-            // Sincroniza todos: O Host avisa a todos quantos players existem agora
-            enviarParaTodos({ tipo: 'UPDATE_COUNT', qtd: connections.length + 1 });
+            setupConnection(conn);
+            // O Host avisa a todos sobre o novo total de players
+            broadcast({ type: 'COUNT', value: connections.length + 1 });
+            updateUI(connections.length + 1);
         });
     }
 
-    function conectarComLoading() {
-        const idAlvo = document.getElementById('join-id').value.toUpperCase();
-        if(!idAlvo) return;
+    function conectar() {
+        const target = document.getElementById('join-id').value.toUpperCase();
+        if(!target) return;
+        
         ir('tela-loading');
+        document.getElementById('error-msg').style.display = 'none';
 
-        const conn = peer.connect(idAlvo);
-        let timeout = setTimeout(() => {
+        const conn = peer.connect(target);
+        
+        const timeout = setTimeout(() => {
             ir('tela-entrar');
-            document.getElementById('msg-erro').classList.remove('hidden');
-        }, 8000);
+            document.getElementById('error-msg').style.display = 'block';
+        }, 7000);
 
         conn.on('open', () => {
             clearTimeout(timeout);
             connections.push(conn);
-            setupConn(conn);
+            setupConnection(conn);
         });
     }
 
-    function setupConn(conn) {
+    function setupConnection(conn) {
         ir('tela-lobby');
         document.getElementById('player-badge').style.display = 'block';
         
         conn.on('data', (data) => {
-            // Se receber atualização do Host, muda o contador de todos
-            if(data.tipo === 'UPDATE_COUNT') {
-                atualizarInterfaceCount(data.qtd);
-            }
-            if(data.tipo === 'START') {
-                alert("O JOGO COMEÇOU!");
-            }
+            if(data.type === 'COUNT') updateUI(data.value);
         });
 
-        // Se for o Host, ele já atualiza o próprio contador
-        if(isHost) atualizarInterfaceCount(connections.length + 1);
+        if(isHost) updateUI(connections.length + 1);
     }
 
-    function atualizarInterfaceCount(qtd) {
+    function updateUI(qtd) {
         document.getElementById('count-val').innerText = qtd;
         if(qtd >= 2) {
-            document.getElementById('wait-msg').innerText = qtd + " JOGADORES NA ARENA!";
-            document.getElementById('wait-msg').style.color = "var(--success)";
-            if(isHost) document.getElementById('btn-start').disabled = false;
+            document.getElementById('wait-txt').innerText = "ARENA PRONTA!";
+            document.getElementById('wait-txt').style.color = "var(--success)";
+            if(isHost) document.getElementById('btn-start').style.display = 'block';
         }
     }
 
-    function enviarParaTodos(msg) {
-        connections.forEach(c => c.send(msg));
-    }
-
-    function comecarJogo() {
-        enviarParaTodos({ tipo: 'START' });
-        alert("Iniciando arena para todos os players!");
-    }
-
-    function copy() {
-        navigator.clipboard.writeText(document.getElementById('copy-box').innerText);
-        alert("Copiado!");
+    function broadcast(data) {
+        connections.forEach(c => c.send(data));
     }
 </script>
 </body>
