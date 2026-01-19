@@ -3,131 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TV CALL - REAL</title>
+    <title>TV CALL - CONEXÃO REAL</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --accent: #ff4757; --bg: #0a0a0a; }
+        :root { --accent: #ff4757; --bg: #000; }
         body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: sans-serif; height: 100vh; overflow: hidden; }
-
-        /* Container da TV */
-        .main-container { height: 100vh; display: flex; flex-direction: column; position: relative; }
-        
-        #remote-video-container { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        
+        .main-container { height: 100vh; display: flex; flex-direction: column; position: relative; display: none; }
+        #remote-video-container { flex: 1; background: #000; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Câmera pequena (sua) */
-        #local-video { 
-            position: absolute; top: 20px; right: 20px; width: 110px; height: 150px; 
-            border-radius: 15px; border: 2px solid rgba(255,255,255,0.4); z-index: 10; background: #222;
-        }
-
-        /* Status e Info */
-        .info-overlay { position: absolute; top: 25px; left: 20px; z-index: 10; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); }
-
-        /* Botão Passar */
+        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid #fff; z-index: 10; }
         .controls { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; z-index: 20; }
-        .btn-next { 
-            background: var(--accent); width: 80px; height: 80px; border-radius: 50%; border: none;
-            color: white; font-size: 40px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5); transition: 0.2s;
-        }
-        .btn-next:active { transform: scale(0.9); }
-
-        /* Animação de Troca */
-        .slide-out { transform: translateX(-100%); transition: 0.3s ease-in; }
-        
-        #loading-overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .start-btn { padding: 20px 40px; border-radius: 50px; border: none; background: white; color: black; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .btn-next { background: var(--accent); width: 80px; height: 80px; border-radius: 50%; border: none; color: white; font-size: 40px; cursor: pointer; }
+        #start-screen { position: fixed; inset: 0; background: #121212; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-start { padding: 20px 40px; border-radius: 50px; border: none; background: #fff; font-weight: bold; cursor: pointer; }
+        #status { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">
-        <h1 style="color: #ff4757; margin-bottom: 30px;">📺 TV CALL</h1>
-        <button class="start-btn" onclick="iniciarApp()">COMEÇAR CALL</button>
-        <p style="color: #666; margin-top: 20px;">Clique para ativar câmera</p>
+    <div id="start-screen">
+        <h1 style="color:var(--accent)">📺 TV CALL</h1>
+        <input type="text" id="room-id" placeholder="Digite um nome para a sala" style="padding:15px; border-radius:10px; border:none; margin-bottom:10px; width:250px; text-align:center">
+        <p style="font-size:12px; color:#888; margin-bottom:20px">Coloque o mesmo nome nos dois celulares</p>
+        <button class="btn-start" onclick="conectar()">ENTRAR NA CALL</button>
     </div>
 
-    <div class="main-container">
-        <div class="info-overlay" id="status-tag">Procurando...</div>
-        
+    <div class="main-container" id="app">
+        <div id="status">Conectando...</div>
         <div id="remote-video-container">
-            <video id="remote-video" autoplay playsinline poster="https://media.giphy.com/media/o8igknyuKs6aY/giphy.gif"></video>
+            <video id="remote-video" autoplay playsinline></video>
             <video id="local-video" autoplay playsinline muted></video>
         </div>
-
         <div class="controls">
-            <button class="btn-next" onclick="passarPessoa()">></button>
+            <button class="btn-next" onclick="location.reload()">></button>
         </div>
     </div>
 
 <script>
-    let peer;
-    let localStream;
-    let currentCall;
+    let peer, localStream, currentCall;
 
-    async function iniciarApp() {
+    async function conectar() {
+        const roomId = document.getElementById('room-id').value;
+        if(!roomId) return alert("Digite um nome para a sala!");
+
         try {
-            // Liga a câmera de verdade
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('loading-overlay').style.display = 'none';
-            
-            configurarConexao();
-        } catch (err) {
-            alert("Erro: Permita o acesso à câmera e microfone!");
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+
+            // O segredo está aqui: o ID do Peer agora é o nome da sala que você digitar
+            // Celular 1 vira "nome-sala-1" e Celular 2 vira "nome-sala-2"
+            const isFirst = Math.random() > 0.5;
+            const myId = isFirst ? roomId + "-1" : roomId + "-2";
+            const otherId = isFirst ? roomId + "-2" : roomId + "-1";
+
+            peer = new Peer(myId);
+
+            peer.on('open', (id) => {
+                document.getElementById('status').innerText = "Procurando parceiro...";
+                // Tenta ligar para o outro celular a cada 3 segundos até ele entrar
+                const connectLoop = setInterval(() => {
+                    const call = peer.call(otherId, localStream);
+                    if(call) {
+                        handleCall(call);
+                        clearInterval(connectLoop);
+                    }
+                }, 3000);
+            });
+
+            peer.on('call', (call) => {
+                call.answer(localStream);
+                handleCall(call);
+            });
+
+        } catch (e) {
+            alert("Erro ao acessar câmera!");
         }
     }
 
-    function configurarConexao() {
-        // PeerJS cria a conexão real entre você e outras pessoas
-        peer = new Peer(); 
-
-        peer.on('open', (id) => {
-            console.log("Seu ID real:", id);
-            document.getElementById('status-tag').innerText = "Online";
-        });
-
-        // Receber call de alguém
-        peer.on('call', (call) => {
-            call.answer(localStream);
-            handleCall(call);
-        });
-    }
-
     function handleCall(call) {
-        if (currentCall) currentCall.close();
-        currentCall = call;
-
         call.on('stream', (remoteStream) => {
             document.getElementById('remote-video').srcObject = remoteStream;
-            document.getElementById('status-tag').innerText = "● Ao Vivo";
+            document.getElementById('status').innerText = "● AO VIVO";
         });
     }
-
-    function passarPessoa() {
-        const video = document.getElementById('remote-video');
-        
-        // Efeito de deslizar a tela
-        video.classList.add('slide-out');
-        document.getElementById('status-tag').innerText = "Buscando...";
-
-        setTimeout(() => {
-            video.classList.remove('slide-out');
-            video.srcObject = null; // Limpa o vídeo atual
-            
-            // Aqui ele buscaria um novo ID de pessoa real
-            console.log("Passou para o próximo");
-        }, 300);
-    }
-
-    // Swipe para o lado (Gesto de passar)
-    let touchX = 0;
-    document.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
-    document.addEventListener('touchend', e => {
-        if (touchX - e.changedTouches[0].clientX > 70) passarPessoa();
-    });
 </script>
 </body>
 </html>
