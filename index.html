@@ -2,124 +2,69 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TV CALL - OFICIAL</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Cigano</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        :root { --accent: #ff4757; --bg: #0a0a0a; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: sans-serif; height: 100vh; overflow: hidden; }
-        
-        #start-screen { position: fixed; inset: 0; background: #121212; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .logo { font-size: 40px; font-weight: bold; color: var(--accent); margin-bottom: 20px; }
-        
-        .btn-ready { background: white; color: black; padding: 20px 50px; border-radius: 50px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        
-        #main-app { display: none; height: 100vh; flex-direction: column; position: relative; }
-        
-        /* Câmera Principal (A outra pessoa) */
-        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #111; }
-        
-        /* Sua Câmera (Pequena) */
-        #local-video { position: absolute; top: 20px; right: 20px; width: 110px; height: 160px; border-radius: 15px; border: 2px solid white; z-index: 100; object-fit: cover; background: #222; }
-
-        .status-bar { position: absolute; top: 25px; left: 20px; z-index: 100; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); }
-
-        .footer { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; z-index: 100; }
-        .btn-next { background: var(--accent); width: 85px; height: 85px; border-radius: 50%; border: none; color: white; font-size: 45px; cursor: pointer; box-shadow: 0 5px 25px rgba(255, 71, 87, 0.4); }
-        
-        /* Estática de TV enquanto não conecta */
-        .loading-gif { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; pointer-events: none; }
+        body { font-family: serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        .caixa { max-width: 400px; margin: auto; background: #4a0404; padding: 20px; border-radius: 15px; border: 2px solid #d4af37; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
+        button { width: 90%; padding: 15px; background: #d4af37; color: black; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        .tela { display: none; }
+        .ativa { display: block; }
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <div class="logo">📺 TV CALL</div>
-        <p style="color: #888; margin-bottom: 30px;">Coloque a mesma SALA nos dois aparelhos</p>
-        <input type="text" id="room-input" placeholder="NOME DA SALA" style="background:#222; color:white; border:2px solid #333; padding:15px; border-radius:15px; width:200px; margin-bottom:20px; text-align:center; font-size:18px;">
-        <button class="btn-ready" onclick="iniciar()">COMEÇAR</button>
+<div class="caixa">
+    <div id="tela1" class="tela ativa">
+        <h2>🔮 Portal Cigano</h2>
+        <p>Receba seu código de acesso</p>
+        <input type="email" id="emailCliente" placeholder="Seu Gmail">
+        <button onclick="enviarCodigo()">Enviar Código</button>
     </div>
 
-    <div id="main-app">
-        <div class="status-bar" id="status">CONECTANDO...</div>
-        
-        <img class="loading-gif" id="tv-static" src="https://media.giphy.com/media/o8igknyuKs6aY/giphy.gif">
-        
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay playsinline muted></video>
-
-        <div class="footer">
-            <button class="btn-next" onclick="location.reload()">➔</button>
-        </div>
+    <div id="tela2" class="tela">
+        <h2>🔐 Verificação</h2>
+        <p>Digite o código enviado para seu e-mail:</p>
+        <input type="number" id="codigoInput" placeholder="00000">
+        <button onclick="validar()">Entrar</button>
     </div>
+</div>
 
 <script>
-    let peer, localStream, currentCall;
+    // Inicialização com sua Public Key da foto
+    emailjs.init("mXV38Elv83PZ-qWd9");
 
-    async function iniciar() {
-        const roomName = document.getElementById('room-input').value.trim().toLowerCase();
-        if (!roomName) return alert("Digite o nome da sala!");
+    let codigoGerado = "";
 
-        try {
-            // Pede Câmera e Microfone
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
+    function enviarCodigo() {
+        const email = document.getElementById('emailCliente').value;
+        if (!email) return alert("Digite um e-mail válido!");
 
-            // Lógica de ID: Celular 1 vira "SALA-A" e Celular 2 vira "SALA-B"
-            // Vamos usar um pequeno truque: tentamos ser o "A". Se já existir, seremos o "B".
-            peer = new Peer(roomName + "-a");
+        // Gera o código de 6 dígitos
+        codigoGerado = Math.floor(100000 + Math.random() * 900000).toString();
 
-            peer.on('open', (id) => {
-                console.log("Logado como terminal A. Esperando terminal B...");
-                document.getElementById('status').innerText = "AGUARDANDO PARCEIRO...";
-            });
+        // Envia para o Gmail usando seu Service ID e o modelo salvo
+        emailjs.send("service_5mwit3u", "template_q9h9qsq", {
+            email: email,       // Preenche o {{email}} do site
+            passcode: codigoGerado, // Preenche o {{passcode}} do site
+            time: "15 minutos"      // Preenche o {{time}} do site
+        }).then(() => {
+            alert("Código enviado com sucesso!");
+            document.getElementById('tela1').classList.remove('ativa');
+            document.getElementById('tela2').classList.add('ativa');
+        }).catch(err => alert("Erro: " + JSON.stringify(err)));
+    }
 
-            // Se der erro porque o "A" já existe, tentamos o "B"
-            peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') {
-                    peer = new Peer(roomName + "-b");
-                    peer.on('open', (id) => {
-                        console.log("Logado como terminal B. Ligando para A...");
-                        document.getElementById('status').innerText = "CHAMANDO...";
-                        // O B liga para o A
-                        conectarAoOutro(roomName + "-a");
-                    });
-                }
-            });
-
-            // Atender chamada
-            peer.on('call', (call) => {
-                call.answer(localStream);
-                handleCall(call);
-            });
-
-        } catch (e) {
-            alert("Erro! Você precisa permitir a câmera e microfone.");
+    function validar() {
+        const digitado = document.getElementById('codigoInput').value;
+        if (digitado === codigoGerado) {
+            alert("✅ ACESSO LIBERADO!");
+            // Aqui você pode redirecionar para sua tabela de preços
+        } else {
+            alert("❌ Código incorreto!");
         }
-    }
-
-    function conectarAoOutro(idParceiro) {
-        // Tenta ligar repetidamente até o outro aceitar
-        let tentativa = setInterval(() => {
-            let call = peer.call(idParceiro, localStream);
-            if(call) {
-                handleCall(call);
-                clearInterval(tentativa);
-            }
-        }, 2000);
-    }
-
-    function handleCall(call) {
-        call.on('stream', (remoteStream) => {
-            const remoteVid = document.getElementById('remote-video');
-            remoteVid.srcObject = remoteStream;
-            document.getElementById('tv-static').style.display = 'none';
-            document.getElementById('status').innerText = "● AO VIVO";
-        });
-        
-        call.on('close', () => location.reload());
     }
 </script>
 </body>
