@@ -3,32 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elite Quiz - Arena Online</title>
+    <title>Elite Quiz - Arena Real</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         :root { --neon-purple: #bc13fe; --neon-blue: #03e9f4; --bg-dark: #050505; --success: #22c55e; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-        
-        #player-badge {
-            position: fixed; top: 20px; right: 20px;
-            background: rgba(0,0,0,0.9); padding: 10px 20px; border-radius: 50px;
-            border: 1px solid var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue);
-            font-weight: bold; font-size: 14px; display: none; z-index: 100;
-        }
-
+        #player-badge { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.9); padding: 10px 20px; border-radius: 50px; border: 1px solid var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue); font-weight: bold; display: none; z-index: 100; }
         #app { background: #111; padding: 40px; border-radius: 30px; width: 85%; max-width: 400px; text-align: center; border: 2px solid var(--neon-purple); box-shadow: 0 0 30px rgba(188, 19, 254, 0.3); }
-        h1 { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 3px; }
-        input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; }
-        
         .btn { width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 15px; }
         .btn-purple { background: var(--neon-purple); color: white; }
         .btn-blue { background: var(--neon-blue); color: #000; }
-        .btn-start { background: var(--success); color: white; display: none; }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        .loading { width: 40px; height: 40px; border: 4px solid #222; border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #btn-start { background: #333; color: #666; cursor: not-allowed; border: 2px solid #444; }
+        #btn-start.ready { background: var(--success); color: white; cursor: pointer; box-shadow: 0 0 20px var(--success); border: none; }
+        input { width: 100%; padding: 18px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 15px; box-sizing: border-box; outline: none; text-align: center; font-size: 18px; }
         .hidden { display: none !important; }
+        .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
     </style>
 </head>
 <body>
@@ -37,7 +27,10 @@
 
 <div id="app">
     <div id="tela-login">
-        <h1>ELITE QUIZ</h1>
+        <h1 style="color:var(--neon-blue)">ELITE QUIZ</h1>
+        <div style="margin-bottom:10px; font-size:12px; color:#666">
+            <span id="dot" class="status-dot"></span> <span id="net-status">Conectando ao satélite...</span>
+        </div>
         <input type="text" id="username" placeholder="SEU NOME..." oninput="check()">
         <button id="bc" class="btn btn-purple" onclick="ir('tela-config')" disabled>CRIAR ARENA</button>
         <button id="be" class="btn btn-blue" onclick="ir('tela-entrar')" disabled>ENTRAR EM SALA</button>
@@ -45,41 +38,52 @@
 
     <div id="tela-config" class="hidden">
         <h2>Criar Arena</h2>
-        <button class="btn btn-purple" onclick="criarHost()">GERAR CÓDIGO</button>
+        <button class="btn btn-purple" onclick="criarHost()">ATIVAR MODO ONLINE</button>
         <button class="btn" style="background:none; color:gray" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
     <div id="tela-entrar" class="hidden">
         <h2>Localizar Arena</h2>
-        <input type="text" id="join-id" placeholder="CÓDIGO DA SALA">
-        <p id="error-msg" style="color:red; font-size:12px; display:none">Servidor não achado tente novamente!</p>
-        <button class="btn btn-blue" onclick="conectar()">CONECTAR AGORA</button>
+        <input type="text" id="join-id" placeholder="CÓDIGO (EX: A1B2)">
+        <p id="error-msg" style="color:red; font-size:12px; display:none">Sala não encontrada. Verifique o código!</p>
+        <button class="btn btn-blue" onclick="conectar()">BUSCAR E ENTRAR</button>
         <button class="btn" style="background:none; color:gray" onclick="ir('tela-login')">VOLTAR</button>
     </div>
 
-    <div id="tela-loading" class="hidden">
-        <div class="loading"></div>
-        <p>CONECTANDO AO SERVIDOR...</p>
-    </div>
-
     <div id="tela-lobby" class="hidden">
-        <h2 id="room-id-display" style="color:var(--neon-purple); font-size: 35px; margin: 10px 0;">----</h2>
-        <p style="font-size: 12px; color: gray;">Compartilhe o código acima</p>
-        <p id="wait-txt" style="color: #ff3333; margin: 20px 0;">Aguardando oponentes...</p>
-        <button id="btn-start" class="btn btn-start" onclick="alert('Iniciando Partida!')">COMEÇAR PARTIDA</button>
+        <h2 id="room-id-display" style="color:var(--neon-purple); font-size: 40px; margin: 10px 0; letter-spacing:5px">----</h2>
+        <p style="color:var(--success); font-size:12px">ARENA ATIVA E PÚBLICA</p>
+        <button id="btn-start" class="btn" onclick="iniciar()">COMEÇAR PARTIDA</button>
+        <p id="wait-msg" style="font-size: 12px; color: #666; margin-top: 10px;">Aguardando oponente...</p>
     </div>
 </div>
 
 <script>
     let peer, connections = [], isHost = false;
 
-    // Inicia o sistema com ID único
-    function init() {
-        const id = Math.random().toString(36).substring(2, 6).toUpperCase();
-        peer = new Peer(id);
-        peer.on('open', () => console.log("Seu ID: " + id));
+    // Função para gerar código curto e fácil de ler
+    function gerarId() {
+        const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let res = "";
+        for(let i=0; i<4; i++) res += letras.charAt(Math.floor(Math.random() * letras.length));
+        return res;
     }
-    init();
+
+    // Inicializa o Peer com o servidor global da Cloud
+    peer = new Peer(gerarId(), {
+        debug: 2
+    });
+
+    peer.on('open', (id) => {
+        document.getElementById('net-status').innerText = "ONLINE (ID: "+id+")";
+        document.getElementById('dot').classList.add('online');
+    });
+
+    peer.on('error', (err) => {
+        console.error(err);
+        alert("Erro de conexão. Reiniciando...");
+        location.reload();
+    });
 
     function check() {
         const v = document.getElementById('username').value.length >= 2;
@@ -88,7 +92,7 @@
     }
 
     function ir(id) {
-        document.querySelectorAll('#tela-login, #tela-config, #tela-entrar, #tela-lobby, #tela-loading').forEach(t => t.classList.add('hidden'));
+        document.querySelectorAll('#tela-login, #tela-config, #tela-entrar, #tela-lobby').forEach(t => t.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
     }
 
@@ -99,27 +103,24 @@
         ir('tela-lobby');
 
         peer.on('connection', (conn) => {
-            connections.push(conn);
-            setupConnection(conn);
-            // O Host avisa a todos sobre o novo total de players
-            broadcast({ type: 'COUNT', value: connections.length + 1 });
-            updateUI(connections.length + 1);
+            conn.on('open', () => {
+                connections.push(conn);
+                setupConnection(conn);
+                broadcast({ type: 'COUNT', value: connections.length + 1 });
+                updateUI(connections.length + 1);
+            });
         });
     }
 
     function conectar() {
-        const target = document.getElementById('join-id').value.toUpperCase();
+        const target = document.getElementById('join-id').value.toUpperCase().trim();
         if(!target) return;
         
-        ir('tela-loading');
-        document.getElementById('error-msg').style.display = 'none';
-
-        const conn = peer.connect(target);
+        const conn = peer.connect(target, {reliable: true});
         
         const timeout = setTimeout(() => {
-            ir('tela-entrar');
             document.getElementById('error-msg').style.display = 'block';
-        }, 7000);
+        }, 8000);
 
         conn.on('open', () => {
             clearTimeout(timeout);
@@ -131,25 +132,31 @@
     function setupConnection(conn) {
         ir('tela-lobby');
         document.getElementById('player-badge').style.display = 'block';
-        
         conn.on('data', (data) => {
             if(data.type === 'COUNT') updateUI(data.value);
+            if(data.type === 'START') alert("PREPARE-SE! O JOGO VAI COMEÇAR.");
         });
-
         if(isHost) updateUI(connections.length + 1);
     }
 
     function updateUI(qtd) {
         document.getElementById('count-val').innerText = qtd;
-        if(qtd >= 2) {
-            document.getElementById('wait-txt').innerText = "ARENA PRONTA!";
-            document.getElementById('wait-txt').style.color = "var(--success)";
-            if(isHost) document.getElementById('btn-start').style.display = 'block';
+        const btn = document.getElementById('btn-start');
+        if(qtd >= 2 && isHost) {
+            btn.classList.add('ready');
+            document.getElementById('wait-msg').innerText = "ARENA PRONTA!";
         }
     }
 
     function broadcast(data) {
         connections.forEach(c => c.send(data));
+    }
+
+    function iniciar() {
+        if(document.getElementById('btn-start').classList.contains('ready')) {
+            broadcast({ type: 'START' });
+            alert("Sincronizando 35 questões...");
+        }
     }
 </script>
 </body>
